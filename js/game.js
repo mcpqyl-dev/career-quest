@@ -3,6 +3,17 @@ const app = document.getElementById('app');
     const roleOptions = (window.roleOptions || []).map(role => ({ ...role }));
     const departments = (window.departments || []).map(dep => ({ ...dep }));
 
+    // Asignar quizzes a cada departamento
+    const quizzesByArea = window.quizzesByArea || {};
+    departments.forEach(dep => {
+      const depSlugId = (dep.id || '').replace(/\s+/g, '-').toLowerCase();
+      if (quizzesByArea[depSlugId]) {
+        dep.quiz = quizzesByArea[depSlugId];
+      } else {
+        dep.quiz = [];
+      }
+    });
+
     const state = {
       screen: 'splash',
       currentRole: null,
@@ -41,6 +52,7 @@ const app = document.getElementById('app');
       if (name === 'splash') renderSplash();
       else if (name === 'welcome') renderWelcome();
       else if (name === 'map') renderMap();
+      else if (name === 'positions') renderPositionsList();
       else if (name === 'department') renderDepartmentScene();
       else if (name === 'quiz') renderQuizScene();
       else if (name === 'collection') renderCollection();
@@ -239,6 +251,61 @@ const app = document.getElementById('app');
       });
     }
 
+    function renderPositionsList() {
+      const dep = departments.find(d => d.id === state.currentDepartment);
+      if (!dep) return;
+
+      // Obtener la categoría seleccionada
+      const categories = window.positionCategories || [];
+      const selectedCategory = categories.find(c => c.id === state.currentCategory);
+      
+      // Filtrar posiciones por categoría si hay
+      const filteredPositions = selectedCategory 
+        ? dep.positions.filter(pos => pos.category === selectedCategory.title)
+        : dep.positions;
+      
+      app.innerHTML = `
+        <section id="positions" class="screen department-screen active screen-enter">
+          ${renderHud()}
+          <div class="positions-container">
+            <div class="positions-header" style="background: linear-gradient(135deg, ${dep.color}20 0%, ${dep.color}40 100%); border-left: 5px solid ${dep.color}; padding: 28px; border-radius: 16px; margin-bottom: 24px;">
+              <div class="meta" style="color: ${dep.color}; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; margin-bottom: 8px;">${selectedCategory ? selectedCategory.icon + ' ' + selectedCategory.title + ' • ' : ''}${dep.mapLabel || dep.title}</div>
+              <h2 style="font-size: 40px; margin: 0 0 12px 0; line-height: 1.1;">${dep.title}</h2>
+              <p style="margin: 0 0 16px 0; color: #dceaf8; line-height: 1.6; font-size: 14px;">${dep.description}</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+              <h3 style="margin: 0 0 16px 0; font-size: 18px; color: #f7fbff; text-transform: uppercase; letter-spacing: 0.08em;">Puestos disponibles (${filteredPositions.length})</h3>
+              ${filteredPositions.length === 0 ? `
+                <div style="padding: 20px; background: rgba(255, 100, 100, 0.1); border: 1px solid rgba(255, 100, 100, 0.2); border-radius: 8px; color: #ff6464;">
+                  No hay puestos en la categoría seleccionada. Prueba a mostrar todas las categorías.
+                </div>
+              ` : `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px;">
+                  ${filteredPositions.map(pos => `
+                    <div class="position-card" onclick="selectPosition('${pos.title}')" style="cursor:pointer; transition: all 0.3s ease; border: 2px solid rgba(${dep.color.substring(1).match(/.{1,2}/g).map(x => parseInt(x, 16)).join(', ')}, 0.3); border-left: 4px solid ${dep.color}; padding: 16px; border-radius: 12px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); display: flex; flex-direction: column;">
+                      <strong style="font-size: 15px; color: #f7fbff; margin-bottom: 8px; line-height: 1.3; word-break: break-word;">${pos.title}</strong>
+                      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: var(--muted);">${pos.level}</span>
+                        ${pos.functions && pos.functions.length > 0 ? `<span style="color: var(--accent); font-size: 11px; background: rgba(${dep.color.substring(1).match(/.{1,2}/g).map(x => parseInt(x, 16)).join(', ')}, 0.2); padding: 4px 8px; border-radius: 4px; white-space: nowrap;">📋 ${pos.functions.length}</span>` : ''}
+                      </div>
+                      <span style="font-size: 13px; color: #dceaf8; margin-bottom: 10px; display: block; line-height: 1.4; flex-grow: 1;">${pos.blurb}</span>
+                      <span style="font-size: 11px; color: var(--accent); display: inline-block;">Ver detalles →</span>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+            
+            <div style="margin-top: 24px;">
+              <button class="secondary-btn" onclick="renderScreen('map')">Volver al mapa</button>
+            </div>
+          </div>
+        </section>
+      `;
+      updateHud();
+    }
+
     function renderDepartmentScene() {
       const dep = departments.find(d => d.id === state.currentDepartment);
       if (!dep) return;
@@ -291,6 +358,7 @@ const app = document.getElementById('app');
                 <p style="margin:0; color:var(--muted);">Responde correctamente para ganar XP y registrar el puesto.</p>
                 <div class="summary-actions" style="margin-top:14px;">
                   <button class="primary-btn" onclick="startQuiz('${dep.id}')">Comenzar mini juego</button>
+                  <button class="secondary-btn" onclick="renderScreen('positions')">Volver a puestos</button>
                   <button class="secondary-btn" onclick="renderScreen('map')">Volver al mapa</button>
                 </div>
               </div>
