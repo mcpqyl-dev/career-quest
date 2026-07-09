@@ -14,6 +14,23 @@ const app = document.getElementById('app');
       }
     });
 
+    // Coordenadas de edificios sobre el mapa imagen (1560x640)
+    const DEPT_COORDS = {
+      'almacen-de-concentrado-y-operaciones-portuarias': { x: 185, y: 320 },
+      'almacenes-y-control-de-inventario':               { x: 480, y: 205 },
+      'direccion-de-logistica-y-comercial':              { x: 895, y: 265 },
+      'comercial':                                       { x: 1385, y: 205 },
+      'compras-y-contratos':                             { x: 480, y: 415 },
+      'planeamiento-de-inventario':                      { x: 820, y: 440 },
+      'transporte-y-trafico-internacional':              { x: 1285, y: 455 }
+    };
+    departments.forEach(dep => {
+      if (DEPT_COORDS[dep.id]) {
+        dep.x = DEPT_COORDS[dep.id].x;
+        dep.y = DEPT_COORDS[dep.id].y;
+      }
+    });
+
     const state = {
       screen: 'splash',
       currentRole: null,
@@ -29,13 +46,14 @@ const app = document.getElementById('app');
       achievements: [],
       quizAnswered: false,
       quizLocked: false,
-      avatarPosition: { x: 150, y: 330 },
+      avatarPosition: { x: 700, y: 490 },
       moving: false,
       camera: { x: 0, y: 0 },
       quizSelection: [],
       pendingDepartment: null,
       lastAchievement: null,
-      toastTimer: null
+      toastTimer: null,
+      categoryMenuOpen: false
     };
 
     let audioCtx = null;
@@ -95,16 +113,7 @@ const app = document.getElementById('app');
               <div class="hero-badge">
                 <div class="mini-figure">
                   <div class="avatar idle" style="left: 60px; top: 24px; transform:scale(1.15);">
-                    <div class="shadow"></div>
-                    <div class="helmet"></div>
-                    <div class="head"></div>
-                    <div class="visor"></div>
-                    <div class="torso"></div>
-                    <div class="badge"></div>
-                    <div class="arm left"></div>
-                    <div class="arm right"></div>
-                    <div class="leg left"></div>
-                    <div class="leg right"></div>
+                    ${avatarSVG()}
                   </div>
                 </div>
               </div>
@@ -134,14 +143,25 @@ const app = document.getElementById('app');
       app.innerHTML = `
         <section id="map" class="screen map-screen active screen-enter">
           ${renderHud()}
-          <div class="category-filter" style="position: absolute; top: 80px; right: 20px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border: 2px solid rgba(100, 200, 255, 0.2); border-radius: 12px; padding: 12px; max-width: 280px; z-index: 100;">
-            <div style="font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; padding: 0 4px;">Filtrar por categoría</div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              ${state.currentCategory ? `<button onclick="clearCategoryFilter()" style="padding: 8px 12px; background: rgba(255, 100, 100, 0.1); border: 1px solid rgba(255, 100, 100, 0.3); color: #ff6464; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">✕ Mostrar todas</button>` : ''}
+          <div style="position: absolute; top: 80px; left: 20px; z-index: 100; min-width: 210px;">
+            <button onclick="toggleCategoryMenu()" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; background: rgba(10, 18, 38, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-radius: ${state.categoryMenuOpen ? '12px 12px 0 0' : '12px'}; color: #f7fbff; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+              <span style="font-size:16px;">${selectedCategory ? selectedCategory.icon : '🗂️'}</span>
+              <span style="flex:1; text-align:left;">${selectedCategory ? selectedCategory.title : 'Elige tu categoría'}</span>
+              <span style="font-size:11px; color:rgba(255,255,255,0.45); display:inline-block; transform: rotate(${state.categoryMenuOpen ? '180deg' : '0deg'});">▼</span>
+            </button>
+            ${state.categoryMenuOpen ? `
+            <div style="background: rgba(10, 18, 38, 0.96); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-top: none; border-radius: 0 0 12px 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
               ${categories.map(cat => `
-                <button onclick="filterByCategory('${cat.id}')" style="padding: 8px 12px; background: ${state.currentCategory === cat.id ? cat.color + '30' : 'rgba(255, 255, 255, 0.05)'}; border: 1px solid ${state.currentCategory === cat.id ? cat.color + '60' : 'rgba(255, 255, 255, 0.1)'}; color: ${state.currentCategory === cat.id ? cat.color : '#dceaf8'}; border-radius: 6px; cursor: pointer; font-size: 12px; text-align: left; transition: all 0.2s;">${cat.icon} ${cat.title}</button>
+                <button onclick="filterByCategory('${cat.id}')" style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: ${state.currentCategory === cat.id ? cat.color + '20' : 'transparent'}; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); color: ${state.currentCategory === cat.id ? cat.color : '#c8dff5'}; font-size: 13px; cursor: pointer; width: 100%; text-align: left; font-weight: ${state.currentCategory === cat.id ? '700' : '400'};">
+                  <span style="font-size:15px;">${cat.icon}</span>
+                  <span>${cat.title}</span>
+                  ${state.currentCategory === cat.id ? `<span style="margin-left:auto; width:6px; height:6px; border-radius:50%; background:${cat.color};"></span>` : ''}
+                </button>
               `).join('')}
-            </div>
+              ${state.currentCategory ? `
+                <button onclick="clearCategoryFilter()" style="display:flex; align-items:center; gap:8px; padding: 10px 16px; background: transparent; border: none; color: #8fafc8; font-size: 12px; cursor: pointer; width: 100%; text-align: left;">✕ Ver todas las áreas</button>
+              ` : ''}
+            </div>` : ''}
           </div>
           <div class="map-backdrop"></div>
           <div class="npc-bubble">
@@ -153,93 +173,18 @@ const app = document.getElementById('app');
           </div>
           <div class="map-shell">
             <div class="map-world" id="mapWorld">
-              <svg class="map-svg" viewBox="0 0 980 620" role="img" aria-label="Mapa de aventura">
+              <svg class="map-svg" viewBox="0 0 1560 640" role="img" aria-label="Mapa de aventura">
                 <defs>
-                  <linearGradient id="sky" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#162d4f" />
-                    <stop offset="100%" stop-color="#0a1323" />
-                  </linearGradient>
                   <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="5" result="blur" />
+                    <feGaussianBlur stdDeviation="4" result="blur" />
                     <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
                   </filter>
                 </defs>
-                <rect width="980" height="620" fill="url(#sky)" />
-                <circle class="cloud" cx="140" cy="92" r="30" fill="rgba(255,255,255,0.16)" />
-                <circle class="cloud" cx="206" cy="76" r="40" fill="rgba(255,255,255,0.12)" />
-                <circle class="cloud cloud-2" cx="720" cy="132" r="34" fill="rgba(255,255,255,0.12)" />
-                <path d="M60 470 C220 400, 330 390, 500 420 S760 500, 920 430" class="road" />
-                <path d="M240 285 C320 265, 420 270, 500 310 S670 360, 760 320" class="road" />
-                <path d="M180 360 C250 330, 320 300, 420 290 S620 300, 740 360" class="road" />
-                <path class="road-glow" d="M150 330 L190 310 L305 420 L540 220 L720 370" />
-                <path d="M80 500 C160 470, 220 420, 320 420 C400 420, 470 450, 610 470 C720 486, 805 476, 900 450" class="water" />
-                <path d="M600 500 L710 500" class="bridge" />
-                <g class="particle">
-                  <circle cx="320" cy="122" r="2" fill="#fff" />
-                  <circle cx="348" cy="138" r="2" fill="#fff" />
-                  <circle cx="370" cy="116" r="2" fill="#fff" />
-                </g>
-                <g>
-                  <path d="M132 192 L152 160 L168 192 Z" fill="#2b5c45" />
-                  <path d="M142 192 L160 160 L180 192 Z" fill="#4b8b65" />
-                  <path d="M144 172 L154 150 L160 172 Z" fill="#6fb984" />
-                </g>
-                <g class="light">
-                  <circle cx="562" cy="184" r="5" fill="#ffe5a0" />
-                  <circle cx="588" cy="168" r="4" fill="#ffdf7b" />
-                </g>
-                <g class="smoke" opacity="0.82">
-                  <ellipse cx="598" cy="174" rx="8" ry="12" fill="rgba(255,255,255,0.16)" />
-                  <ellipse cx="612" cy="166" rx="9" ry="14" fill="rgba(255,255,255,0.12)" />
-                  <ellipse cx="626" cy="172" rx="7" ry="10" fill="rgba(255,255,255,0.1)" />
-                </g>
-                <g class="mountain">
-                  <path d="M28 510 L150 340 L232 510 Z" fill="#22354b" />
-                  <path d="M140 510 L254 274 L360 510 Z" fill="#29465b" />
-                </g>
-                <g class="mountain">
-                  <path d="M688 510 L742 376 L806 510 Z" fill="#213648" />
-                  <path d="M730 510 L808 320 L900 510 Z" fill="#31556d" />
-                </g>
-                <g class="tree">
-                  <rect x="820" y="460" width="10" height="36" rx="5" fill="#6d5337" />
-                  <circle cx="825" cy="447" r="22" fill="#3e7c4d" />
-                  <circle cx="812" cy="432" r="18" fill="#5aa15d" />
-                </g>
-                <g class="tree">
-                  <rect x="120" y="455" width="8" height="32" rx="4" fill="#6d5337" />
-                  <circle cx="124" cy="440" r="18" fill="#4d9a5b" />
-                </g>
-                <g class="rock">
-                  <path d="M690 420 L710 402 L732 420 L718 440 Z" fill="#5c666c" />
-                  <path d="M700 440 L722 424 L744 440 L730 456 Z" fill="#6f7980" />
-                </g>
-                <g class="particle" opacity="0.8">
-                  <circle cx="352" cy="146" r="2" fill="#fff" />
-                  <circle cx="382" cy="162" r="2" fill="#fff" />
-                </g>
-                <g class="smoke" opacity="0.8">
-                  <ellipse cx="592" cy="178" rx="8" ry="12" fill="rgba(255,255,255,0.18)" />
-                  <ellipse cx="604" cy="170" rx="10" ry="16" fill="rgba(255,255,255,0.14)" />
-                  <ellipse cx="618" cy="176" rx="7" ry="10" fill="rgba(255,255,255,0.12)" />
-                </g>
-                <g class="light">
-                  <rect x="86" y="258" width="10" height="24" rx="5" fill="#f8f2ca" />
-                  <circle cx="91" cy="250" r="6" fill="#ffd96f" />
-                </g>
+                <image href="images/map.png" x="0" y="0" width="1560" height="640" preserveAspectRatio="xMidYMid meet"/>
                 ${visibleDepartments.map(dep => `${renderDepartmentBuilding(dep)}`).join('')}
               </svg>
               <div class="avatar ${state.moving ? 'walking' : 'idle'}" id="avatar" style="left:${state.avatarPosition.x}px; top:${state.avatarPosition.y}px;">
-                <div class="shadow"></div>
-                <div class="helmet"></div>
-                <div class="head"></div>
-                <div class="visor"></div>
-                <div class="torso"></div>
-                <div class="badge"></div>
-                <div class="arm left"></div>
-                <div class="arm right"></div>
-                <div class="leg left"></div>
-                <div class="leg right"></div>
+                ${avatarSVG()}
               </div>
             </div>
           </div>
@@ -549,13 +494,25 @@ const app = document.getElementById('app');
       if (hudHost) hudHost.outerHTML = renderHud();
     }
 
+    function toggleCategoryMenu() {
+      state.categoryMenuOpen = !state.categoryMenuOpen;
+      renderScreen('map');
+    }
+
+    function toggleCategoryMenu() {
+      state.categoryMenuOpen = !state.categoryMenuOpen;
+      renderScreen('map');
+    }
+
     function filterByCategory(categoryId) {
       state.currentCategory = categoryId === state.currentCategory ? null : categoryId;
+      state.categoryMenuOpen = false;
       renderScreen('map');
     }
 
     function clearCategoryFilter() {
       state.currentCategory = null;
+      state.categoryMenuOpen = false;
       renderScreen('map');
     }
 
@@ -734,8 +691,8 @@ const app = document.getElementById('app');
       const viewportH = shell.clientHeight || 600;
       const targetX = state.avatarPosition.x - viewportW / 2 + 60;
       const targetY = state.avatarPosition.y - viewportH / 2 + 70;
-      const maxX = Math.max(0, 980 - viewportW);
-      const maxY = Math.max(0, 620 - viewportH);
+      const maxX = Math.max(0, 1560 - viewportW);
+      const maxY = Math.max(0, 640 - viewportH);
       const cameraX = Math.max(0, Math.min(maxX, targetX));
       const cameraY = Math.max(0, Math.min(maxY, targetY));
       state.camera = { x: cameraX, y: cameraY };
@@ -794,62 +751,54 @@ const app = document.getElementById('app');
 
     function renderDepartmentBuilding(dep) {
       const accent = dep.color;
-      const label = dep.mapLabel || dep.title.split(' ')[0];
-      
-      if (dep.id === 'comercial') {
-        return `
-          <g class="building" onclick="enterDepartment('${dep.id}')" transform="translate(${dep.x}, ${dep.y})">
-            <rect x="-58" y="-78" width="116" height="108" rx="24" fill="rgba(8,14,24,0.9)" />
-            <rect x="-42" y="-62" width="84" height="76" rx="18" fill="${accent}" opacity="0.94" />
-            <rect x="-30" y="-50" width="60" height="20" rx="8" fill="rgba(255,255,255,0.9)" />
-            <rect x="-22" y="-24" width="12" height="16" rx="4" fill="rgba(255,255,255,0.86)" />
-            <rect x="8" y="-24" width="12" height="16" rx="4" fill="rgba(255,255,255,0.86)" />
-            <rect x="-12" y="-2" width="24" height="10" rx="4" fill="rgba(7,16,30,0.92)" />
-            <path d="M-24 10 H24" stroke="rgba(255,255,255,0.24)" stroke-width="4" stroke-linecap="round" />
-            <rect x="-18" y="16" width="36" height="8" rx="4" fill="rgba(255,255,255,0.2)" />
-            <text x="0" y="48" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">${label}</text>
-          </g>
-        `;
-      }
-      if (dep.id === 'supply') {
-        return `
-          <g class="building" onclick="enterDepartment('${dep.id}')" transform="translate(${dep.x}, ${dep.y})">
-            <rect x="-62" y="-76" width="124" height="112" rx="20" fill="rgba(8,14,24,0.9)" />
-            <rect x="-46" y="-58" width="92" height="70" rx="12" fill="${accent}" opacity="0.94" />
-            <rect x="-34" y="-42" width="20" height="28" rx="4" fill="rgba(255,255,255,0.8)" />
-            <rect x="-8" y="-42" width="20" height="28" rx="4" fill="rgba(255,255,255,0.8)" />
-            <rect x="18" y="-42" width="20" height="28" rx="4" fill="rgba(255,255,255,0.8)" />
-            <rect x="-12" y="-4" width="24" height="10" rx="4" fill="rgba(7,16,30,0.9)" />
-            <rect x="-38" y="12" width="76" height="8" rx="4" fill="rgba(255,255,255,0.22)" />
-            <circle cx="-28" cy="-54" r="6" fill="rgba(255,255,255,0.45)" />
-            <text x="0" y="50" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">${label}</text>
-          </g>
-        `;
-      }
-      if (dep.id === 'logistica') {
-        return `
-          <g class="building" onclick="enterDepartment('${dep.id}')" transform="translate(${dep.x}, ${dep.y})">
-            <rect x="-58" y="-80" width="116" height="110" rx="22" fill="rgba(8,14,24,0.9)" />
-            <rect x="-38" y="-62" width="76" height="74" rx="14" fill="${accent}" opacity="0.94" />
-            <rect x="-26" y="-42" width="20" height="28" rx="4" fill="rgba(255,255,255,0.84)" />
-            <rect x="6" y="-42" width="20" height="28" rx="4" fill="rgba(255,255,255,0.84)" />
-            <rect x="-12" y="-6" width="24" height="10" rx="5" fill="rgba(7,16,30,0.9)" />
-            <path d="M-20 18 L20 18" stroke="rgba(255,255,255,0.24)" stroke-width="4" stroke-linecap="round" />
-            <path d="M-14 24 L-4 14 L6 24" stroke="rgba(255,255,255,0.16)" stroke-width="4" fill="none" stroke-linecap="round" />
-            <text x="0" y="50" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">${label}</text>
-          </g>
-        `;
-      }
       return `
         <g class="building" onclick="enterDepartment('${dep.id}')" transform="translate(${dep.x}, ${dep.y})">
-          <rect x="-60" y="-82" width="120" height="116" rx="24" fill="rgba(8,14,24,0.9)" />
-          <rect x="-40" y="-66" width="80" height="80" rx="12" fill="${accent}" opacity="0.94" />
-          <rect x="-28" y="-42" width="56" height="20" rx="8" fill="rgba(255,255,255,0.84)" />
-          <rect x="-20" y="-14" width="14" height="20" rx="5" fill="rgba(255,255,255,0.36)" />
-          <rect x="6" y="-14" width="14" height="20" rx="5" fill="rgba(255,255,255,0.36)" />
-          <path d="M-24 18 H24" stroke="rgba(255,255,255,0.18)" stroke-width="4" stroke-linecap="round" />
-          <text x="0" y="52" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">${label}</text>
+          <circle r="50" fill="${accent}" opacity="0.12"/>
+          <circle r="50" fill="none" stroke="${accent}" stroke-width="3" stroke-dasharray="8 5" opacity="0.75"/>
+          <circle r="22" fill="rgba(8,14,24,0.9)" stroke="${accent}" stroke-width="2.5"/>
+          <text x="0" y="8" text-anchor="middle" font-size="18" fill="${accent}">${dep.icon}</text>
         </g>
+      `;
+    }
+
+    function avatarSVG() {
+      return `
+        <svg viewBox="0 0 72 104" width="72" height="104" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="36" cy="100" rx="22" ry="7" fill="rgba(0,0,0,0.3)"/>
+          <g class="leg left" transform="translate(27,62)">
+            <rect x="-7" y="0" width="13" height="26" rx="4" fill="#2C5FC4"/>
+            <rect x="-9" y="23" width="17" height="9" rx="3" fill="#7A4E2A"/>
+          </g>
+          <g class="leg right" transform="translate(45,62)">
+            <rect x="-6" y="0" width="13" height="26" rx="4" fill="#2C5FC4"/>
+            <rect x="-7" y="23" width="17" height="9" rx="3" fill="#7A4E2A"/>
+          </g>
+          <rect x="22" y="38" width="28" height="28" rx="6" fill="#EFEFEF"/>
+          <rect x="22" y="38" width="11" height="28" rx="4" fill="#F07020"/>
+          <rect x="39" y="38" width="11" height="28" rx="4" fill="#F07020"/>
+          <rect x="22" y="53" width="11" height="3" fill="rgba(255,255,255,0.9)"/>
+          <rect x="39" y="53" width="11" height="3" fill="rgba(255,255,255,0.9)"/>
+          <rect x="22" y="60" width="11" height="3" fill="rgba(255,255,255,0.9)"/>
+          <rect x="39" y="60" width="11" height="3" fill="rgba(255,255,255,0.9)"/>
+          <g class="arm left" transform="translate(16,40)">
+            <rect x="-6" y="0" width="12" height="24" rx="5" fill="#EFEFEF"/>
+          </g>
+          <g class="arm right" transform="translate(56,40)">
+            <rect x="-6" y="0" width="12" height="24" rx="5" fill="#EFEFEF"/>
+          </g>
+          <rect x="30" y="31" width="12" height="11" rx="4" fill="#F5C8A0"/>
+          <circle cx="36" cy="23" r="14" fill="#F5C8A0"/>
+          <path d="M23 20 Q23 5 36 4 Q49 5 49 20" fill="#5A3010"/>
+          <path d="M49 17 Q57 21 58 31 Q57 40 53 41 Q56 34 53 26 Q51 19 49 21 Z" fill="#5A3010"/>
+          <path d="M22 20 Q22 4 36 3 Q50 4 50 20 L52 25 L20 25 Z" fill="#F2F2F2"/>
+          <rect x="19" y="22" width="34" height="5" rx="2.5" fill="#DCDCDC"/>
+          <polygon points="36,10 41,19 31,19" fill="#1565C0"/>
+          <circle cx="30" cy="22" r="2.2" fill="#2A1A0A"/>
+          <circle cx="42" cy="22" r="2.2" fill="#2A1A0A"/>
+          <circle cx="31" cy="21" r="0.9" fill="white"/>
+          <circle cx="43" cy="21" r="0.9" fill="white"/>
+          <path d="M29 29 Q36 34 43 29" stroke="#C08060" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
       `;
     }
 

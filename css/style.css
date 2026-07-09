@@ -75,7 +75,7 @@
 
     .map-screen { background: linear-gradient(180deg, rgba(10,19,33,0.98), rgba(5,12,24,0.98)); display:flex; flex-direction:column; padding:0; }
     .map-shell { position:relative; flex:1; min-height:0; padding:0; overflow:hidden; border-radius:24px; border:1px solid rgba(255,255,255,0.08); display:block; }
-    .map-world { position:absolute; top:50%; left:50%; width:min(100%, 980px); height:auto; aspect-ratio:980 / 620; max-width:100%; max-height:100%; transform:translate(-50%, -50%); transform-origin:center center; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+    .map-world { position:absolute; top:50%; left:50%; width:min(100%, 1560px); height:auto; aspect-ratio:1560 / 640; max-width:100%; max-height:100%; transform:translate(-50%, -50%); transform-origin:center center; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
     .map-svg { width:100%; height:100%; display:block; }
     .map-backdrop { position:absolute; inset:0; background: radial-gradient(circle at 20% 20%, rgba(76,201,240,0.08), transparent 34%), radial-gradient(circle at 85% 10%, rgba(122,77,255,0.1), transparent 30%), linear-gradient(180deg, #13263c, #0a1323 65%, #09111b); }
     .cloud { animation: drift 20s linear infinite; }
@@ -99,24 +99,11 @@
     .transition-overlay { position:absolute; inset:0; background:rgba(2,6,12,0.34); backdrop-filter: blur(6px); z-index:40; pointer-events:none; opacity:0; transition:opacity .35s ease; }
     .transition-overlay.active { opacity:1; }
     .avatar { position:absolute; width:72px; height:104px; z-index:25; pointer-events:none; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
-    .avatar .shadow { position:absolute; left:14px; bottom:-4px; width:44px; height:16px; background:rgba(0,0,0,0.26); border-radius:50%; filter: blur(8px); }
-    .avatar .body { position:absolute; inset:0; }
-    .avatar .head { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #1e2a37, #0c1522); position:absolute; left:20px; top:2px; box-shadow:inset 0 -4px 8px rgba(255,255,255,0.07); }
-    .avatar .visor { width:24px; height:14px; border-radius:8px 8px 6px 6px; background:linear-gradient(135deg, #b5d8ff, #6da1ff); position:absolute; left:24px; top:12px; box-shadow:0 0 0 2px rgba(0,0,0,0.18); }
-    .avatar .helmet { width:38px; height:20px; border-radius:12px 12px 8px 8px; background:linear-gradient(135deg, #f4f6ff, #8b97ab); position:absolute; left:17px; top:-4px; box-shadow:0 6px 12px rgba(0,0,0,0.22); }
-    .avatar .torso { width:34px; height:34px; background:linear-gradient(135deg, var(--accent), #0e4f64); position:absolute; left:19px; top:32px; border-radius:14px 14px 12px 12px; box-shadow:0 8px 18px rgba(0,0,0,0.22); }
-    .avatar .badge { width:18px; height:18px; border-radius:50%; background:linear-gradient(135deg, var(--warning), #c76d06); position:absolute; right:2px; top:34px; }
-    .avatar .arm { position:absolute; width:10px; height:26px; background:linear-gradient(135deg, #132033, #0c1421); border-radius:999px; top:37px; }
-    .avatar .arm.left { left:12px; transform-origin:top center; }
-    .avatar .arm.right { left:50px; transform-origin:top center; }
-    .avatar .leg { position:absolute; width:12px; height:30px; background:linear-gradient(135deg, #1b2330, #0c1422); border-radius:0 0 8px 8px; top:64px; }
-    .avatar .leg.left { left:22px; }
-    .avatar .leg.right { left:38px; }
     .avatar.idle { animation: breathe 2.2s ease-in-out infinite; }
-    .avatar.walking .arm.left { animation: swingLeft .45s ease-in-out infinite alternate; }
-    .avatar.walking .arm.right { animation: swingRight .45s ease-in-out infinite alternate; }
-    .avatar.walking .leg.left { animation: stepLeft .45s ease-in-out infinite alternate; }
-    .avatar.walking .leg.right { animation: stepRight .45s ease-in-out infinite alternate; }
+    .avatar.walking .arm.left  { animation: swingLeft  .42s ease-in-out infinite alternate; transform-origin: 0 0; }
+    .avatar.walking .arm.right { animation: swingRight .42s ease-in-out infinite alternate; transform-origin: 0 0; }
+    .avatar.walking .leg.left  { animation: stepLeft   .42s ease-in-out infinite alternate; transform-origin: 0 0; }
+    .avatar.walking .leg.right { animation: stepRight  .42s ease-in-out infinite alternate; transform-origin: 0 0; }
 
     .department-screen { background: linear-gradient(120deg, rgba(8,16,33,0.98), rgba(5,11,20,0.97)); padding:24px 24px 28px; }
     .department-shell { display:grid; grid-template-columns:1.05fr 0.95fr; gap:22px; height:100%; }
