@@ -1,113 +1,14 @@
 const app = document.getElementById('app');
 
-    const roleOptions = [
-      { id: 'comercial', title: 'Comercial', icon: '🧭', summary: 'Transforma información en oportunidades de valor.', accent: '#4cc9f0' },
-      { id: 'logistica', title: 'Logística', icon: '🚚', summary: 'Coordina el flujo de la cadena de valor.', accent: '#2dd4bf' },
-      { id: 'operaciones', title: 'Operaciones', icon: '⚙️', summary: 'Optimiza procesos y seguridad.', accent: '#7c4dff' },
-      { id: 'contratos', title: 'Contratos', icon: '📄', summary: 'Asegura acuerdos y cumplimiento.', accent: '#ffb703' },
-      { id: 'planeamiento', title: 'Planeamiento', icon: '🗺️', summary: 'Da sentido a la estrategia y el futuro.', accent: '#ff6b6b' },
-      { id: 'supply', title: 'Supply', icon: '📦', summary: 'Conecta demanda, abastecimiento y negocio.', accent: '#8ec5ff' }
-    ];
-
-    const departments = [
-      {
-        id: 'comercial',
-        title: 'Gerencia Comercial',
-        name: 'Analista Comercial',
-        subtitle: 'Mina y negocios',
-        description: 'Convierte datos de mercado en decisiones que impulsan crecimiento y fidelización.',
-        npc: 'Carlos',
-        npcRole: 'Supervisor Comercial',
-        quote: 'Aquí transformamos información en decisiones y oportunidades.',
-        competencies: ['Análisis de mercado', 'Comunicación', 'Pensamiento estratégico'],
-        functions: ['Monitorear oportunidades', 'Preparar propuestas', 'Alinear con clientes'],
-        kpis: ['Tasa de cierre', 'Retención', 'Cobertura comercial'],
-        skills: ['Storytelling de valor', 'Negociación', 'Diseño de propuesta'],
-        positions: [
-          { title: 'Analista Comercial', level: 'Nivel 2', blurb: 'Descifra información para construir mejores decisiones.' },
-          { title: 'Especialista Comercial', level: 'Nivel 3', blurb: 'Acompaña el ciclo de negocio con rigor y empatía.' }
-        ],
-        quiz: [
-          { type: 'choice', question: '¿Qué habilidad ayuda a convertir datos en propuestas?', options: ['Storytelling de valor', 'Repetir métricas', 'Evitar contacto'], answer: 0 },
-          { type: 'boolean', question: '¿El área comercial busca oportunidades de negocio?', options: ['Verdadero', 'Falso'], answer: true }
-        ],
-        x: 190, y: 310, color: '#4cc9f0'
-      },
-      {
-        id: 'supply',
-        title: 'Gerencia Supply',
-        name: 'Planner',
-        subtitle: 'Abastecimiento y cadena',
-        description: 'Coordina abastecimiento, planificación y disponibilidad de materiales.',
-        npc: 'Mara',
-        npcRole: 'Planner',
-        quote: 'Aquí cuidamos que cada pieza llegue a tiempo a la operación.',
-        competencies: ['Planificación', 'Visión de flujo', 'Resolución de problemas'],
-        functions: ['Planificar compras', 'Asegurar inventario', 'Coordinar proveedores'],
-        kpis: ['Disponibilidad', 'Lead time', 'Exactitud de plan'],
-        skills: ['Modelado de demanda', 'Análisis de inventario', 'Coordinación cross-functional'],
-        positions: [
-          { title: 'Planner', level: 'Nivel 2', blurb: 'Anticipa demanda y evita interrupciones.' },
-          { title: 'Business Analyst', level: 'Nivel 3', blurb: 'Convierte datos de operación en recomendaciones accionables.' }
-        ],
-        quiz: [
-          { type: 'choice', question: '¿Qué prioridad tiene Supply?', options: ['Disponibilidad continua', 'Evitar reuniones', 'Reducir visión'], answer: 0 },
-          { type: 'boolean', question: '¿El planner considera demanda y lead time?', options: ['Verdadero', 'Falso'], answer: true }
-        ],
-        x: 540, y: 220, color: '#8ec5ff'
-      },
-      {
-        id: 'logistica',
-        title: 'Gerencia Logística',
-        name: 'Coordinador Logístico',
-        subtitle: 'Movilidad y distribución',
-        description: 'Da vida a la operación con rutas, tiempos y sincronía de transporte.',
-        npc: 'Iñigo',
-        npcRole: 'Jefe de Logística',
-        quote: 'Cada movimiento tiene impacto en la continuidad del negocio.',
-        competencies: ['Coordinación', 'Gestión del tiempo', 'Visión operativa'],
-        functions: ['Planificar transporte', 'Monitorear entregas', 'Optimizar recorridos'],
-        kpis: ['Eficiencia de ruta', 'Cumplimiento', 'Costo por servicio'],
-        skills: ['Optimización', 'Seguimiento', 'Trabajo en equipo'],
-        positions: [
-          { title: 'Coordinador Logístico', level: 'Nivel 2', blurb: 'Balancea urgencia, capacidad y costo.' },
-          { title: 'Especialista de Operación', level: 'Nivel 3', blurb: 'Eleva rendimiento con foco en continuidad.' }
-        ],
-        quiz: [
-          { type: 'choice', question: '¿Qué mejora la logística?', options: ['Recorridos más eficientes', 'Menos reuniones', 'Más improvisación'], answer: 0 },
-          { type: 'sequence', question: 'Ordena el flujo de la entrega', options: ['Planificar ruta', 'Cargar transporte', 'Entregar en destino'], answer: [0, 1, 2] }
-        ],
-        x: 305, y: 420, color: '#2dd4bf'
-      },
-      {
-        id: 'planeamiento',
-        title: 'Gerencia de Planeamiento',
-        name: 'Planner Senior',
-        subtitle: 'Futuro y estrategia',
-        description: 'Modela escenarios, alinea metas y prepara el siguiente paso.',
-        npc: 'Sofía',
-        npcRole: 'Planner Senior',
-        quote: 'Aquí entendemos el presente para construir mejor mañana.',
-        competencies: ['Modelamiento', 'Visión de negocio', 'Comunicación'],
-        functions: ['Escenarios de futuro', 'Alineación de metas', 'Monitoreo de iniciativas'],
-        kpis: ['Precisión de plan', 'Ejecución', 'Alineación'],
-        skills: ['Pensamiento sistémico', 'Visualización', 'Toma de decisiones'],
-        positions: [
-          { title: 'Planner Senior', level: 'Nivel 3', blurb: 'Convierte un panorama complejo en ruta clara.' },
-          { title: 'Business Planner', level: 'Nivel 4', blurb: 'Integra visión, métricas y prioridades.' }
-        ],
-        quiz: [
-          { type: 'sequence', question: 'Ordena la lógica del planeamiento', options: ['Definir metas', 'Analizar escenario', 'Alinear ejecución'], answer: [0, 1, 2] },
-          { type: 'choice', question: '¿Qué se busca al planear?', options: ['Alinear el futuro', 'Evitar decisiones', 'Reducir datos'], answer: 0 }
-        ],
-        x: 720, y: 370, color: '#ff6b6b'
-      }
-    ];
+    const roleOptions = (window.roleOptions || []).map(role => ({ ...role }));
+    const departments = (window.departments || []).map(dep => ({ ...dep }));
 
     const state = {
       screen: 'splash',
       currentRole: null,
+      currentCategory: null,
       currentDepartment: null,
+      currentPosition: null,
       currentQuizIndex: 0,
       discoveredDepartments: [],
       discoveredPositions: [],
@@ -139,7 +40,6 @@ const app = document.getElementById('app');
       playTone('transition');
       if (name === 'splash') renderSplash();
       else if (name === 'welcome') renderWelcome();
-      else if (name === 'selection') renderSelection();
       else if (name === 'map') renderMap();
       else if (name === 'department') renderDepartmentScene();
       else if (name === 'quiz') renderQuizScene();
@@ -177,7 +77,7 @@ const app = document.getElementById('app');
               <span class="eyebrow">Inicio de misión</span>
               <h2>En Chinalco creemos que el crecimiento comienza cuando conocemos nuevos desafíos.</h2>
               <div class="typing" id="typingText"></div>
-              <button class="hero-button" onclick="goToSelection()">Comenzar aventura</button>
+              <button class="hero-button" onclick="renderScreen('map')">Comenzar aventura</button>
             </div>
             <div class="right-pane">
               <div class="hero-badge">
@@ -208,34 +108,29 @@ const app = document.getElementById('app');
       typeWriter(text, 'typingText');
     }
 
-    function renderSelection() {
-      app.innerHTML = `
-        <section id="selection" class="screen selection active screen-enter">
-          <div class="section-header">
-            <div>
-              <h3>Elige tu punto de partida</h3>
-              <p>Selecciona el puesto que mejor representa tu camino actual.</p>
-            </div>
-          </div>
-          <div class="role-grid">
-            ${roleOptions.map(role => `
-              <div class="role-card" onclick="selectRole('${role.id}')">
-                <div class="icon">${role.icon}</div>
-                <h4>${role.title}</h4>
-                <p>${role.summary}</p>
-              </div>
-            `).join('')}
-          </div>
-        </section>
-      `;
-    }
-
     function renderMap() {
       const role = state.currentRole ? roleOptions.find(r => r.id === state.currentRole) : null;
       const currentDep = state.currentDepartment ? departments.find(d => d.id === state.currentDepartment) : null;
+      const categories = window.positionCategories || [];
+      const selectedCategory = categories.find(c => c.id === state.currentCategory);
+      
+      // Filtrar departamentos si hay categoría seleccionada
+      const visibleDepartments = state.currentCategory 
+        ? departments.filter(dep => selectedCategory.areas.includes(dep.title))
+        : departments;
+      
       app.innerHTML = `
         <section id="map" class="screen map-screen active screen-enter">
           ${renderHud()}
+          <div class="category-filter" style="position: absolute; top: 80px; right: 20px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border: 2px solid rgba(100, 200, 255, 0.2); border-radius: 12px; padding: 12px; max-width: 280px; z-index: 100;">
+            <div style="font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; padding: 0 4px;">Filtrar por categoría</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${state.currentCategory ? `<button onclick="clearCategoryFilter()" style="padding: 8px 12px; background: rgba(255, 100, 100, 0.1); border: 1px solid rgba(255, 100, 100, 0.3); color: #ff6464; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">✕ Mostrar todas</button>` : ''}
+              ${categories.map(cat => `
+                <button onclick="filterByCategory('${cat.id}')" style="padding: 8px 12px; background: ${state.currentCategory === cat.id ? cat.color + '30' : 'rgba(255, 255, 255, 0.05)'}; border: 1px solid ${state.currentCategory === cat.id ? cat.color + '60' : 'rgba(255, 255, 255, 0.1)'}; color: ${state.currentCategory === cat.id ? cat.color : '#dceaf8'}; border-radius: 6px; cursor: pointer; font-size: 12px; text-align: left; transition: all 0.2s;">${cat.icon} ${cat.title}</button>
+              `).join('')}
+            </div>
+          </div>
           <div class="map-backdrop"></div>
           <div class="npc-bubble">
             <div class="npc-portrait">${currentDep ? '🧑' : '🗺️'}</div>
@@ -320,7 +215,7 @@ const app = document.getElementById('app');
                   <rect x="86" y="258" width="10" height="24" rx="5" fill="#f8f2ca" />
                   <circle cx="91" cy="250" r="6" fill="#ffd96f" />
                 </g>
-                ${departments.map(dep => `${renderDepartmentBuilding(dep)}`).join('')}
+                ${visibleDepartments.map(dep => `${renderDepartmentBuilding(dep)}`).join('')}
               </svg>
               <div class="avatar ${state.moving ? 'walking' : 'idle'}" id="avatar" style="left:${state.avatarPosition.x}px; top:${state.avatarPosition.y}px;">
                 <div class="shadow"></div>
@@ -346,38 +241,50 @@ const app = document.getElementById('app');
 
     function renderDepartmentScene() {
       const dep = departments.find(d => d.id === state.currentDepartment);
+      if (!dep) return;
+
+      // Filtrar posiciones por categoría si está seleccionada
+      const categories = window.positionCategories || [];
+      const selectedCategory = categories.find(c => c.id === state.currentCategory);
+      const availablePositions = selectedCategory 
+        ? dep.positions.filter(pos => pos.category === selectedCategory.title)
+        : dep.positions;
+
+      const position = state.currentPosition ? availablePositions.find(p => p.title === state.currentPosition) : availablePositions[0];
+      if (!position) return;
+
       app.innerHTML = `
         <section id="department" class="screen department-screen active screen-enter">
           ${renderHud()}
           <div class="department-shell">
             <div class="department-card">
-              <div class="meta">${dep.subtitle}</div>
-              <h3>${dep.title}</h3>
-              <p>${dep.description}</p>
+              <div class="meta">${position.level}</div>
+              <h3>${position.title}</h3>
+              <p>${position.blurb}</p>
               <div class="chip-row">
-                ${dep.competencies.map(c => `<span class="chip">${c}</span>`).join('')}
+                ${selectedCategory ? `<span class="chip" style="background: ${selectedCategory.color}20; color: ${selectedCategory.color};">${selectedCategory.icon} ${selectedCategory.title}</span>` : ''}
+                ${position.carrera_afin ? `<span class="chip">📚 ${position.carrera_afin}</span>` : ''}
+                ${position.idioma ? `<span class="chip">🗣️ ${position.idioma}</span>` : ''}
               </div>
               <div class="department-stats">
-                <div class="stat"><div class="stat-label">Funciones</div><div class="stat-value">${dep.functions[0]}</div></div>
-                <div class="stat"><div class="stat-label">KPIs</div><div class="stat-value">${dep.kpis[0]}</div></div>
-              </div>
-              <div class="media-grid">
-                <div class="media-box">Escena del puesto</div>
-                <div class="media-box">Vista de la gerencia</div>
+                ${position.experiencia_general && position.experiencia_general !== 'nan' ? `<div class="stat"><div class="stat-label">Exp. General</div><div class="stat-value">${position.experiencia_general} años</div></div>` : ''}
+                ${position.experiencia_puesto && position.experiencia_puesto !== 'nan' ? `<div class="stat"><div class="stat-label">Exp. Puesto</div><div class="stat-value">${position.experiencia_puesto} años</div></div>` : ''}
+                ${position.experiencia_sector && position.experiencia_sector !== 'nan' ? `<div class="stat"><div class="stat-label">Exp. Sector</div><div class="stat-value">${position.experiencia_sector} años</div></div>` : ''}
               </div>
             </div>
             <div class="info-card">
-              <div class="meta">Puesto destacado</div>
-              <h3>${dep.name}</h3>
-              <p>${dep.quote}</p>
-              <div class="position-list">
-                ${dep.positions.map(pos => `
-                  <div class="position-card">
-                    <strong>${pos.title}</strong>
-                    <span>${pos.level} · ${pos.blurb}</span>
-                  </div>
-                `).join('')}
-              </div>
+              <div class="meta">Detalles del puesto</div>
+              <h4 style="margin:0 0 12px 0;">${dep.title}</h4>
+              <p style="margin:0 0 14px 0; color:#dceaf8; font-size:14px; line-height:1.6;">${dep.description}</p>
+              ${position.functions && position.functions.length > 0 ? `
+                <div style="margin-top:14px;">
+                  <h5 style="margin:0 0 8px 0; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.08em;">Funciones principales</h5>
+                  <ul style="margin:0; padding:0 0 0 20px; color:var(--muted); font-size:13px;">
+                    ${position.functions.slice(0, 4).map(func => `<li style="margin-bottom:6px;">${func}</li>`).join('')}
+                    ${position.functions.length > 4 ? `<li style="margin-top:8px; font-style:italic;">... y ${position.functions.length - 4} funciones más</li>` : ''}
+                  </ul>
+                </div>
+              ` : ''}
               <div class="quiz-card">
                 <div class="meta">Mini juego</div>
                 <h4 style="margin:10px 0 4px;">Pon a prueba tu comprensión</h4>
@@ -574,8 +481,14 @@ const app = document.getElementById('app');
       if (hudHost) hudHost.outerHTML = renderHud();
     }
 
-    function goToSelection() {
-      renderScreen('selection');
+    function filterByCategory(categoryId) {
+      state.currentCategory = categoryId === state.currentCategory ? null : categoryId;
+      renderScreen('map');
+    }
+
+    function clearCategoryFilter() {
+      state.currentCategory = null;
+      renderScreen('map');
     }
 
     function selectRole(roleId) {
@@ -596,12 +509,21 @@ const app = document.getElementById('app');
       state.pendingDepartment = depId;
       moveAvatarTo({ x: dep.x, y: dep.y }, () => {
         state.currentDepartment = state.pendingDepartment;
+        state.currentPosition = null;
         state.currentQuizIndex = 0;
         state.quizAnswered = false;
         state.quizSelection = [];
         state.pendingDepartment = null;
-        renderScreen('department');
+        renderScreen('positions');
       });
+    }
+
+    function selectPosition(positionTitle) {
+      state.currentPosition = positionTitle;
+      state.currentQuizIndex = 0;
+      state.quizAnswered = false;
+      state.quizSelection = [];
+      renderScreen('department');
     }
 
     function startQuiz(depId) {
@@ -760,6 +682,7 @@ const app = document.getElementById('app');
     function resetGame() {
       state.currentRole = null;
       state.currentDepartment = null;
+      state.currentPosition = null;
       state.currentQuizIndex = 0;
       state.discoveredDepartments = [];
       state.discoveredPositions = [];
@@ -803,6 +726,8 @@ const app = document.getElementById('app');
 
     function renderDepartmentBuilding(dep) {
       const accent = dep.color;
+      const label = dep.mapLabel || dep.title.split(' ')[0];
+      
       if (dep.id === 'comercial') {
         return `
           <g class="building" onclick="enterDepartment('${dep.id}')" transform="translate(${dep.x}, ${dep.y})">
@@ -814,7 +739,7 @@ const app = document.getElementById('app');
             <rect x="-12" y="-2" width="24" height="10" rx="4" fill="rgba(7,16,30,0.92)" />
             <path d="M-24 10 H24" stroke="rgba(255,255,255,0.24)" stroke-width="4" stroke-linecap="round" />
             <rect x="-18" y="16" width="36" height="8" rx="4" fill="rgba(255,255,255,0.2)" />
-            <text x="0" y="48" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">Comercial</text>
+            <text x="0" y="48" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">${label}</text>
           </g>
         `;
       }
@@ -829,7 +754,7 @@ const app = document.getElementById('app');
             <rect x="-12" y="-4" width="24" height="10" rx="4" fill="rgba(7,16,30,0.9)" />
             <rect x="-38" y="12" width="76" height="8" rx="4" fill="rgba(255,255,255,0.22)" />
             <circle cx="-28" cy="-54" r="6" fill="rgba(255,255,255,0.45)" />
-            <text x="0" y="50" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">Supply</text>
+            <text x="0" y="50" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">${label}</text>
           </g>
         `;
       }
@@ -843,7 +768,7 @@ const app = document.getElementById('app');
             <rect x="-12" y="-6" width="24" height="10" rx="5" fill="rgba(7,16,30,0.9)" />
             <path d="M-20 18 L20 18" stroke="rgba(255,255,255,0.24)" stroke-width="4" stroke-linecap="round" />
             <path d="M-14 24 L-4 14 L6 24" stroke="rgba(255,255,255,0.16)" stroke-width="4" fill="none" stroke-linecap="round" />
-            <text x="0" y="50" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">Logística</text>
+            <text x="0" y="50" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">${label}</text>
           </g>
         `;
       }
@@ -855,7 +780,7 @@ const app = document.getElementById('app');
           <rect x="-20" y="-14" width="14" height="20" rx="5" fill="rgba(255,255,255,0.36)" />
           <rect x="6" y="-14" width="14" height="20" rx="5" fill="rgba(255,255,255,0.36)" />
           <path d="M-24 18 H24" stroke="rgba(255,255,255,0.18)" stroke-width="4" stroke-linecap="round" />
-          <text x="0" y="52" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">Planeación</text>
+          <text x="0" y="52" text-anchor="middle" fill="#f7fbff" font-size="12" font-weight="700">${label}</text>
         </g>
       `;
     }

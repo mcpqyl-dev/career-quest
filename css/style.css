@@ -191,6 +191,11 @@
     @keyframes popIn { from { transform:scale(.9); opacity:0; } to { transform:scale(1); opacity:1; } }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
+    .positions-container { padding: 0; overflow-y: auto; max-height: calc(100% - 80px); }
+    .positions-header h2 { font-size: 36px !important; }
+    .position-card { transition: all 0.3s ease !important; }
+    .position-card:hover { transform: translateY(-4px); border-color: rgba(255, 255, 255, 0.2) !important; }
+
     @media (max-width: 1080px) {
       .role-grid { grid-template-columns:repeat(2,1fr); }
       .hero-card, .department-shell, .summary-shell { grid-template-columns:1fr; }
