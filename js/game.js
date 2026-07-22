@@ -29,6 +29,8 @@ const app = document.getElementById('app');
     }));
     const departments = (window.departments || []).map(dep => ({ ...dep }));
     const ONBOARDING_STORAGE_KEY = 'careerQuestOnboardingSeenV1';
+    const USER_DATA_STORAGE_KEY = 'careerQuestUsersDataV1';
+    const GOOGLE_SHEETS_WEBHOOK_URL = String(window.CAREER_QUEST_WEBHOOK_URL || '').trim();
     const REQUIRED_MISSIONS_FOR_PASSPORT_DOWNLOAD = 4;
     const XP_FOR_NEW_DEPARTMENT_VISIT = 8;
     const XP_FOR_NEW_POSITION_VISIT = 5;
@@ -448,6 +450,7 @@ const app = document.getElementById('app');
       CareerProfile.render(app, {
         areas: departments,
         onSave: (savedProfile) => {
+          saveRegistrationData(savedProfile);
           state.avatarPosition = { x: 150, y: 330 };
           showToast(`Perfil guardado. Bienvenido, ${savedProfile.name}.`);
           renderScreen('map');
@@ -1250,6 +1253,160 @@ const app = document.getElementById('app');
       return html2CanvasLoaderPromise;
     }
 
+    function safeReadUserRecords() {
+      try {
+        if (!window.localStorage) return [];
+        const rawRecords = localStorage.getItem(USER_DATA_STORAGE_KEY);
+        if (!rawRecords) return [];
+        const parsed = JSON.parse(rawRecords);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function safeWriteUserRecords(records) {
+      try {
+        if (!window.localStorage) return;
+        localStorage.setItem(USER_DATA_STORAGE_KEY, JSON.stringify(records));
+      } catch (error) {
+        // noop
+      }
+    }
+
+    function buildUserRecordId(profile) {
+      const code = String(profile?.mcpCode || '').trim();
+      if (code) return `mcp-${code}`;
+      const name = String(profile?.name || '').trim().toLowerCase();
+      const slug = name.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      return slug ? `name-${slug}` : 'anon-user';
+    }
+
+    function saveRegistrationData(profile) {
+      if (!profile) return;
+      const nowIso = new Date().toISOString();
+      const records = safeReadUserRecords();
+      const recordId = buildUserRecordId(profile);
+      const existingIndex = records.findIndex(record => record.recordId === recordId);
+      const nextRecord = {
+        recordId,
+        updatedAt: nowIso,
+        registration: {
+          name: profile.name || '',
+          mcpCode: profile.mcpCode || '',
+          currentArea: profile.currentArea || '',
+          createdAt: profile.createdAt || nowIso
+        },
+        finalPassport: existingIndex >= 0 ? records[existingIndex].finalPassport || null : null
+      };
+
+      if (existingIndex >= 0) {
+        records[existingIndex] = nextRecord;
+      } else {
+        records.push(nextRecord);
+      }
+
+      safeWriteUserRecords(records);
+    }
+
+    function buildUserDataSnapshot() {
+      const profile = window.CareerProfileData
+        ? CareerProfileData.getProfile()
+        : null;
+
+      const missionSummary = window.MissionEngine
+        ? MissionEngine.getSummary(state)
+        : { completed: 0, total: 0 };
+
+      const stats = window.CareerPassport
+        ? CareerPassport.getStats(state)
+        : {
+            exploredDepartments: 0,
+            exploredPositions: 0,
+            completedQuizzes: 0,
+            completedMissions: 0,
+            totalMissions: 0,
+            xp: 0,
+            level: 1
+          };
+
+      return {
+        generatedAt: new Date().toISOString(),
+        registration: {
+          name: profile?.name || '',
+          mcpCode: profile?.mcpCode || '',
+          currentArea: profile?.currentArea || '',
+          createdAt: profile?.createdAt || null
+        },
+        finalPassport: {
+          stats,
+          missionSummary,
+          achievements: [...(state.achievements || [])],
+          visitedDepartments: [...(state.visitedDepartments || [])],
+          visitedPositions: [...(state.visitedPositions || [])],
+          currentRole: state.currentRole || null,
+          currentCategory: state.currentCategory || null
+        }
+      };
+    }
+
+    function saveFinalPassportData(snapshot) {
+      if (!snapshot) return;
+      const records = safeReadUserRecords();
+      const recordId = buildUserRecordId(snapshot.registration || {});
+      const nowIso = new Date().toISOString();
+      const existingIndex = records.findIndex(record => record.recordId === recordId);
+      const baseRecord = existingIndex >= 0
+        ? records[existingIndex]
+        : {
+            recordId,
+            updatedAt: nowIso,
+            registration: {
+              name: '',
+              mcpCode: '',
+              currentArea: '',
+              createdAt: null
+            },
+            finalPassport: null
+          };
+
+      const nextRecord = {
+        ...baseRecord,
+        updatedAt: nowIso,
+        registration: {
+          ...baseRecord.registration,
+          ...snapshot.registration
+        },
+        finalPassport: snapshot.finalPassport
+      };
+
+      if (existingIndex >= 0) {
+        records[existingIndex] = nextRecord;
+      } else {
+        records.push(nextRecord);
+      }
+
+      safeWriteUserRecords(records);
+    }
+
+    async function syncUserDataToGoogleSheets(snapshot) {
+      if (!GOOGLE_SHEETS_WEBHOOK_URL || !snapshot) return false;
+
+      try {
+        await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(snapshot)
+        });
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
     async function downloadCareerPassport() {
       const missionSummary = window.MissionEngine
         ? MissionEngine.getSummary(state)
@@ -1270,6 +1427,10 @@ const app = document.getElementById('app');
       const originalVisibility = actionsPanel ? actionsPanel.style.visibility : '';
 
       try {
+        const userDataSnapshot = buildUserDataSnapshot();
+        saveFinalPassportData(userDataSnapshot);
+        syncUserDataToGoogleSheets(userDataSnapshot);
+
         if (actionsPanel) actionsPanel.style.visibility = 'hidden';
         showToast('Generando captura del Passport...');
 
