@@ -463,6 +463,10 @@ const app = document.getElementById('app');
       const currentDep = state.currentDepartment ? departments.find(d => d.id === state.currentDepartment) : null;
       const categories = getAvailableCategories();
       const selectedCategory = categories.find(c => c.id === state.currentCategory);
+      const isMobileViewport = window.innerWidth <= 760;
+      const categoryPanelStyle = isMobileViewport
+        ? 'position: absolute; top: 84px; left: 10px; right: 10px; z-index: 100; min-width: 0;'
+        : 'position: absolute; top: 96px; left: 24px; z-index: 100; min-width: 210px;';
       
       // Filtrar departamentos si hay categoría seleccionada
       const visibleDepartments = state.currentCategory 
@@ -474,7 +478,7 @@ const app = document.getElementById('app');
       app.innerHTML = `
         <section id="map" class="screen map-screen active screen-enter">
           ${renderHud()}
-          <div style="position: absolute; top: 96px; left: 24px; z-index: 100; min-width: 210px;">
+          <div style="${categoryPanelStyle}">
             <button data-guide="category-filter" onclick="toggleCategoryMenu()" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; background: rgba(10, 18, 38, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-radius: ${state.categoryMenuOpen ? '12px 12px 0 0' : '12px'}; color: #f7fbff; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
               <span style="font-size:16px;">${selectedCategory ? selectedCategory.icon : '🗂️'}</span>
               <span style="flex:1; text-align:left;">${selectedCategory ? selectedCategory.title : 'Elige tu categoría'}</span>

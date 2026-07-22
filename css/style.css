@@ -201,20 +201,21 @@
       .collection-grid { grid-template-columns:repeat(2,1fr); }
     }
     @media (max-width: 760px) {
-      #app { height:100vh; border-radius:0; }
+        #app { width:100vw; height:100dvh; border-radius:0; border:none; }
       .screen { padding:14px; }
       .role-grid, .collection-grid, .achievement-list, .department-stats, .stats-grid { grid-template-columns:1fr; }
             .hud { margin-bottom:10px; flex-wrap:wrap; min-height:auto; }
             .hud-card { height:70px; }
             .xp-pill { flex:1 1 100%; min-width:0; }
-            .hud-btns { width:100%; margin-left:0; flex-wrap:wrap; }
+            .hud-btns { width:100%; margin-left:0; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
       .npc-bubble { top:16px; }
-    .map-screen { padding:12px 12px 14px; }
-    .map-shell { padding:0; }
+        .map-screen { padding:10px 10px 12px; }
+        .map-shell { padding:0; border-radius:16px; }
       .department-screen { padding:14px; }
       .map-world { width:100%; height:100%; }
             .hud-btn, .primary-btn, .secondary-btn { padding:10px 12px; font-size:14px; }
-            .hud-btn { height:42px; }
+            .hud-btn { height:42px; width:100%; white-space:normal; line-height:1.2; }
+            .toast { left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); max-width:none; }
     }
 /* =========================================================
    CAREER QUEST v1.1
@@ -1012,6 +1013,86 @@
     }
 
 
+    .passport-screen {
+
+        padding: 10px;
+
+        place-items: start center;
+
+    }
+
+
+    .passport-card {
+
+        width: 100%;
+
+        border-radius: 22px;
+
+    }
+
+
+    .passport-cover {
+
+        padding: 18px;
+
+    }
+
+
+    .passport-content {
+
+        padding: 18px;
+
+    }
+
+
+    .passport-player {
+
+        gap: 12px;
+
+        padding-bottom: 16px;
+
+    }
+
+
+    .passport-player h3 {
+
+        font-size: 18px;
+
+    }
+
+
+    .passport-stat strong {
+
+        font-size: 20px;
+
+    }
+
+
+    .passport-message {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+    }
+
+
+    .passport-download-panel {
+
+        padding: 12px;
+
+    }
+
+
+    .passport-download-btn {
+
+        min-height: 44px;
+
+        white-space: normal;
+
+    }
+
+
     .profile-header {
 
         align-items: flex-start;
@@ -1178,15 +1259,41 @@
 
     .passport-overlay {
 
-        padding: 15px;
+        position: fixed;
+
+        padding:
+            calc(10px + env(safe-area-inset-top))
+            calc(10px + env(safe-area-inset-right))
+            calc(10px + env(safe-area-inset-bottom))
+            calc(10px + env(safe-area-inset-left));
+
+        place-items: start center;
+
+        overflow-y: auto;
+
+        -webkit-overflow-scrolling: touch;
+
+    }
+
+    .passport-overlay .passport-screen {
+
+        min-height: auto;
+
+        display: block;
+
+        width: 100%;
+
+        padding: 0;
 
     }
 
     .passport-close {
 
-        top: 12px;
+        position: fixed;
 
-        right: 12px;
+        top: calc(10px + env(safe-area-inset-top));
+
+        right: calc(10px + env(safe-area-inset-right));
 
     }
 
@@ -1606,23 +1713,47 @@
 
     .mission-overlay {
 
-        padding: 15px;
+        position: fixed;
+
+        padding:
+            calc(10px + env(safe-area-inset-top))
+            calc(10px + env(safe-area-inset-right))
+            calc(10px + env(safe-area-inset-bottom))
+            calc(10px + env(safe-area-inset-left));
+
+        place-items: start center;
+
+        overflow-y: auto;
+
+    }
+
+    .mission-board-screen {
+
+        width: 100%;
+
+        height: auto;
+
+        display: block;
 
     }
 
     .mission-board-card {
 
+        width: 100%;
+
         padding: 20px;
 
-        max-height: calc(100% - 10px);
+        max-height: none;
 
     }
 
     .mission-close {
 
-        top: 12px;
+        position: fixed;
 
-        right: 12px;
+        top: calc(10px + env(safe-area-inset-top));
+
+        right: calc(10px + env(safe-area-inset-right));
 
     }
 
