@@ -11,19 +11,29 @@
 
         getStats(state) {
 
+            const missionSummary =
+                global.MissionEngine
+                    ? global.MissionEngine.getSummary(state || {})
+                    : { completed: 0, total: 0 };
+
             return {
 
-                discoveredDepartments:
+                exploredDepartments:
+                     state?.visitedDepartments?.length ||
                      state?.discoveredDepartments?.length || 0,
 
-                discoveredPositions:
+                exploredPositions:
+                     state?.visitedPositions?.length ||
                      state?.discoveredPositions?.length || 0,
 
                 completedQuizzes:
                     state?.completedQuizzes || 0,
 
-                achievements:
-                    state?.achievements?.length || 0,
+                completedMissions:
+                    missionSummary.completed || 0,
+
+                totalMissions:
+                    missionSummary.total || 0,
 
                 xp:
                     state?.xp || 0,
@@ -36,7 +46,7 @@
         },
 
 
-        render(container, state) {
+        render(container, state, options = {}) {
 
             if (!container) return;
 
@@ -48,6 +58,16 @@
 
             const stats =
                 this.getStats(state);
+
+            const canDownloadPassport =
+                Boolean(options.canDownloadPassport);
+
+            const missionProgressText =
+                this.escape(options.missionProgressText || '0/4');
+
+            const requiredMissions =
+                Number(options.requiredMissions) || 4;
+
             const requiredXP =
                 stats.level * 100;
 
@@ -172,11 +192,11 @@
                                     </span>
 
                                     <strong>
-                                        ${stats.discoveredDepartments}
+                                        ${stats.exploredDepartments}
                                     </strong>
 
                                     <span>
-                                        Áreas descubiertas
+                                        Áreas exploradas
                                     </span>
 
                                 </div>
@@ -189,7 +209,7 @@
                                     </span>
 
                                     <strong>
-                                        ${stats.discoveredPositions}
+                                        ${stats.exploredPositions}
                                     </strong>
 
                                     <span>
@@ -223,11 +243,11 @@
                                     </span>
 
                                     <strong>
-                                        ${stats.achievements}
+                                        ${stats.completedMissions}/${stats.totalMissions}
                                     </strong>
 
                                     <span>
-                                        Logros obtenidos
+                                        Misiones completadas
                                     </span>
 
                                 </div>
@@ -248,6 +268,20 @@
                                     tu próximo desafío.
                                 </p>
 
+                            </div>
+
+                            <div class="passport-download-panel">
+                                <div class="passport-download-meta">
+                                    <strong>Misiones completadas: ${missionProgressText}</strong>
+                                    <span>
+                                        ${canDownloadPassport
+                                            ? '¡Desbloqueado! Ya puedes capturar y descargar tu Passport.'
+                                            : `Completa ${requiredMissions} misiones para habilitar la descarga.`}
+                                    </span>
+                                </div>
+                                ${canDownloadPassport
+                                    ? `<button class="primary-btn passport-download-btn" onclick="downloadCareerPassport()">Capturar y descargar Passport</button>`
+                                    : `<button class="secondary-btn passport-download-btn" disabled>Descarga bloqueada</button>`}
                             </div>
 
 

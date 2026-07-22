@@ -10,6 +10,34 @@ const app = document.getElementById('app');
       color: role.color
     }));
     const departments = (window.departments || []).map(dep => ({ ...dep }));
+    const ONBOARDING_STORAGE_KEY = 'careerQuestOnboardingSeenV1';
+    const REQUIRED_MISSIONS_FOR_PASSPORT_DOWNLOAD = 4;
+    const XP_FOR_NEW_DEPARTMENT_VISIT = 8;
+    const XP_FOR_NEW_POSITION_VISIT = 5;
+    const onboardingSteps = [
+      {
+        selector: '[data-guide="hud-xp"]',
+        title: 'Tu progreso',
+        description: 'Aqui ves tu nivel y XP actual. Al responder mini juegos subes de nivel.'
+      },
+      {
+        selector: '[data-guide="category-filter"]',
+        title: 'Filtro por categoria',
+        description: 'Usa este selector para enfocarte en un tipo de puesto y limpiar el mapa visualmente.'
+      },
+      {
+        selector: '.building',
+        title: 'Puntos del mapa',
+        description: 'Estos puntos representan areas. Haz clic para entrar y explorar sus puestos.'
+      },
+      {
+        selector: '[data-guide="hud-actions"]',
+        title: 'Accesos rapidos',
+        description: 'Desde aqui abres Passport, Misiones, Mapa y Perfil en cualquier momento.'
+      }
+    ];
+    let onboardingResizeHandler = null;
+    let html2CanvasLoaderPromise = null;
 
     // Asignar quizzes a cada departamento
     const quizzesByArea = window.quizzesByArea || {};
@@ -21,6 +49,163 @@ const app = document.getElementById('app');
         dep.quiz = [];
       }
     });
+
+    function normalizeText(value) {
+      return String(value || '')
+        .replace(/^\s*\d+[\.)-]?\s*/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function uniqueTexts(items) {
+      const seen = new Set();
+      return items.filter(item => {
+        const key = normalizeText(item).toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function hashString(value) {
+      return Array.from(String(value || '')).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    }
+
+    function buildChoiceQuestionData(correctOption, candidates, fallbackPool, desiredCount, seed) {
+      const normalizedCorrect = normalizeText(correctOption) || 'No definida';
+      const wantedDistractors = Math.max(1, desiredCount - 1);
+      const uniqueCandidateDistractors = uniqueTexts(candidates)
+        .filter(item => item.toLowerCase() !== normalizedCorrect.toLowerCase());
+      const uniqueFallbackDistractors = uniqueTexts(fallbackPool)
+        .filter(item => item.toLowerCase() !== normalizedCorrect.toLowerCase());
+
+      const distractors = [];
+      const addUniqueDistractor = (item) => {
+        if (!item) return;
+        const normalized = normalizeText(item);
+        if (!normalized) return;
+        if (normalized.toLowerCase() === normalizedCorrect.toLowerCase()) return;
+        if (distractors.some(existing => existing.toLowerCase() === normalized.toLowerCase())) return;
+        distractors.push(normalized);
+      };
+
+      uniqueCandidateDistractors.forEach(addUniqueDistractor);
+      uniqueFallbackDistractors.forEach(addUniqueDistractor);
+
+      let fillerIndex = 1;
+      while (distractors.length < wantedDistractors) {
+        addUniqueDistractor(`Alternativa adicional ${fillerIndex}`);
+        fillerIndex += 1;
+      }
+
+      const options = [normalizedCorrect, ...distractors.slice(0, wantedDistractors)];
+      const rotation = hashString(seed) % options.length;
+      const rotatedOptions = options
+        .slice(rotation)
+        .concat(options.slice(0, rotation));
+
+      return {
+        options: rotatedOptions,
+        answer: rotatedOptions.findIndex(option => option === normalizedCorrect)
+      };
+    }
+
+    function createPositionQuiz(dep, position) {
+      const functions = uniqueTexts(position.functions || []);
+      const allDepFunctions = uniqueTexts(
+        (dep.positions || [])
+          .flatMap(pos => pos.functions || [])
+      );
+      const otherFunctions = allDepFunctions.filter(func =>
+        !functions.some(own => own.toLowerCase() === func.toLowerCase())
+      );
+
+      const fallbackDistractors = [
+        'Diseñar campañas masivas de marketing para redes sociales.',
+        'Programar videojuegos para entretenimiento corporativo.',
+        'Realizar cirugías de alta complejidad en campo.'
+      ];
+
+      const correctFunction = functions[0] || `${position.title} coordina procesos clave de ${dep.title}.`;
+      const functionChoiceData = buildChoiceQuestionData(
+        correctFunction,
+        otherFunctions,
+        fallbackDistractors,
+        3,
+        `${dep.id}:${position.title}:function`
+      );
+
+      let booleanQuestion = {
+        type: 'boolean',
+        question: `¿Es parte del puesto ${position.title}: ${correctFunction}?`,
+        answer: true
+      };
+
+      if (otherFunctions.length) {
+        const falseFunction = otherFunctions[0];
+        booleanQuestion = {
+          type: 'boolean',
+          question: `¿Es parte del puesto ${position.title}: ${falseFunction}?`,
+          answer: false
+        };
+      }
+
+      const speciality = normalizeText(position.speciality || position.blurb || 'No definida');
+      const allSpecialities = uniqueTexts(
+        (dep.positions || []).map(pos => normalizeText(pos.speciality || pos.blurb || ''))
+      );
+      const specialityChoiceData = buildChoiceQuestionData(
+        speciality,
+        allSpecialities,
+        ['Administración', 'Ingeniería Industrial', 'Logística', 'Operaciones'],
+        3,
+        `${dep.id}:${position.title}:speciality`
+      );
+
+      return [
+        {
+          type: 'choice',
+          question: `¿Cuál de estas funciones corresponde al puesto ${position.title}?`,
+          options: functionChoiceData.options,
+          answer: functionChoiceData.answer
+        },
+        booleanQuestion,
+        {
+          type: 'choice',
+          question: `¿Qué especialidad base se alinea con el puesto ${position.title}?`,
+          options: specialityChoiceData.options,
+          answer: specialityChoiceData.answer
+        }
+      ];
+    }
+
+    function assignPositionQuizzes() {
+      departments.forEach(dep => {
+        (dep.positions || []).forEach(position => {
+          position.quiz = createPositionQuiz(dep, position);
+        });
+      });
+    }
+
+    function getCurrentPosition(dep) {
+      const positions = dep && dep.positions ? dep.positions : [];
+      if (!positions.length) return null;
+      if (state.currentPosition) {
+        const selected = positions.find(pos => pos.title === state.currentPosition);
+        if (selected) return selected;
+      }
+      return positions[0];
+    }
+
+    function getCurrentQuizSet(dep) {
+      const position = getCurrentPosition(dep);
+      if (position && Array.isArray(position.quiz) && position.quiz.length) {
+        return position.quiz;
+      }
+      return dep && Array.isArray(dep.quiz) ? dep.quiz : [];
+    }
+
+    assignPositionQuizzes();
 
     // Coordenadas de edificios sobre el mapa imagen (1560x640)
     const DEPT_COORDS = {
@@ -48,9 +233,12 @@ const app = document.getElementById('app');
       currentQuizIndex: 0,
       discoveredDepartments: [],
       discoveredPositions: [],
+      visitedDepartments: [],
+      visitedPositions: [],
       xp: 0,
       level: 1,
       completedQuizzes: 0,
+      quizAttempts: 0,
       achievements: [],
       quizAnswered: false,
       quizLocked: false,
@@ -61,14 +249,38 @@ const app = document.getElementById('app');
       pendingDepartment: null,
       lastAchievement: null,
       toastTimer: null,
-      categoryMenuOpen: false
+      categoryMenuOpen: false,
+      missionRewardsClaimed: [],
+      onboardingSeen: false,
+      onboardingActive: false,
+      onboardingStep: 0
     };
 
     let audioCtx = null;
 
     function init() {
+      state.onboardingSeen = hasSeenOnboarding();
       renderScreen('splash');
       setTimeout(() => renderScreen('welcome'), 1800);
+    }
+
+    function hasSeenOnboarding() {
+      try {
+        return window.localStorage && localStorage.getItem(ONBOARDING_STORAGE_KEY) === '1';
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function setOnboardingSeen() {
+      state.onboardingSeen = true;
+      try {
+        if (window.localStorage) {
+          localStorage.setItem(ONBOARDING_STORAGE_KEY, '1');
+        }
+      } catch (error) {
+        // noop
+      }
     }
 
     function renderScreen(name) {
@@ -117,7 +329,7 @@ const app = document.getElementById('app');
               <span class="eyebrow">Inicio de misión</span>
               <h2>En Chinalco creemos que el crecimiento comienza cuando conocemos nuevos desafíos.</h2>
               <div class="typing" id="typingText"></div>
-              <button class="hero-button" onclick="renderScreen('role')">Comenzar aventura</button>
+              <button class="hero-button" onclick="startAdventure()">Comenzar aventura</button>
             </div>
             <div class="right-pane">
               <div class="hero-badge">
@@ -137,6 +349,10 @@ const app = document.getElementById('app');
       `;
       const text = 'Hoy iniciarás una aventura para descubrir oportunidades dentro de la organización y conocer cómo la movilidad horizontal puede abrirte nuevas puertas.';
       typeWriter(text, 'typingText');
+    }
+
+    function startAdventure() {
+      renderScreen('role');
     }
 
     function renderRoleSelection() {
@@ -165,7 +381,6 @@ const app = document.getElementById('app');
     function renderProfileScreen() {
       if (!window.CareerProfile || !window.CareerProfileData) {
         showToast('No se pudo cargar Career Profile. Revisa los scripts del proyecto.');
-        renderScreen('map');
         return;
       }
       CareerProfile.render(app, {
@@ -193,7 +408,7 @@ const app = document.getElementById('app');
         <section id="map" class="screen map-screen active screen-enter">
           ${renderHud()}
           <div style="position: absolute; top: 80px; left: 20px; z-index: 100; min-width: 210px;">
-            <button onclick="toggleCategoryMenu()" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; background: rgba(10, 18, 38, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-radius: ${state.categoryMenuOpen ? '12px 12px 0 0' : '12px'}; color: #f7fbff; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+            <button data-guide="category-filter" onclick="toggleCategoryMenu()" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; background: rgba(10, 18, 38, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-radius: ${state.categoryMenuOpen ? '12px 12px 0 0' : '12px'}; color: #f7fbff; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
               <span style="font-size:16px;">${selectedCategory ? selectedCategory.icon : '🗂️'}</span>
               <span style="flex:1; text-align:left;">${selectedCategory ? selectedCategory.title : 'Elige tu categoría'}</span>
               <span style="font-size:11px; color:rgba(255,255,255,0.45); display:inline-block; transform: rotate(${state.categoryMenuOpen ? '180deg' : '0deg'});">▼</span>
@@ -213,14 +428,7 @@ const app = document.getElementById('app');
             </div>` : ''}
           </div>
           <div class="map-backdrop"></div>
-          <div class="npc-bubble">
-            <div class="npc-portrait">${currentDep ? '🧑' : '🗺️'}</div>
-            <div>
-              <div class="small">${currentDep ? `${currentDep.npc} · ${currentDep.npcRole}` : role ? role.title : 'Guía'}</div>
-              <div class="text">${currentDep ? currentDep.quote : 'Tu aventura comienza. Explora las gerencias para descubrir puestos, competencias y oportunidades.'}</div>
-            </div>
-          </div>
-          <div class="map-shell">
+          <div class="map-shell" data-guide="map-shell">
             <div class="map-world" id="mapWorld">
               <svg class="map-svg" viewBox="0 0 1560 640" role="img" aria-label="Mapa de aventura">
                 <defs>
@@ -242,7 +450,115 @@ const app = document.getElementById('app');
       requestAnimationFrame(() => {
         placeAvatarAt(state.avatarPosition.x, state.avatarPosition.y);
         updateCamera();
+        if (state.onboardingActive) {
+          renderOnboardingStep();
+        } else if (!state.onboardingSeen) {
+          startOnboarding();
+        }
       });
+    }
+
+    function startOnboarding() {
+      if (state.screen !== 'map' || state.onboardingSeen) return;
+      state.onboardingActive = true;
+      state.onboardingStep = 0;
+      renderOnboardingStep();
+    }
+
+    function cleanupOnboardingListeners() {
+      if (onboardingResizeHandler) {
+        window.removeEventListener('resize', onboardingResizeHandler);
+        onboardingResizeHandler = null;
+      }
+    }
+
+    function closeOnboarding(markSeen) {
+      const overlay = document.getElementById('onboardingOverlay');
+      if (overlay) overlay.remove();
+      cleanupOnboardingListeners();
+      state.onboardingActive = false;
+      if (markSeen) setOnboardingSeen();
+    }
+
+    function renderOnboardingStep() {
+      if (!state.onboardingActive || state.screen !== 'map') return;
+      const step = onboardingSteps[state.onboardingStep];
+      if (!step) {
+        closeOnboarding(true);
+        return;
+      }
+
+      const appRect = app.getBoundingClientRect();
+      const target = document.querySelector(step.selector);
+      const targetRect = target ? target.getBoundingClientRect() : null;
+
+      const existing = document.getElementById('onboardingOverlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'onboardingOverlay';
+      overlay.className = 'onboarding-overlay';
+
+      let highlightStyle = 'display:none;';
+      if (targetRect) {
+        const top = Math.max(0, targetRect.top - appRect.top - 6);
+        const left = Math.max(0, targetRect.left - appRect.left - 6);
+        const width = Math.max(40, targetRect.width + 12);
+        const height = Math.max(40, targetRect.height + 12);
+        highlightStyle = `top:${top}px;left:${left}px;width:${width}px;height:${height}px;`;
+      }
+
+      const isFirst = state.onboardingStep === 0;
+      const isLast = state.onboardingStep === onboardingSteps.length - 1;
+
+      overlay.innerHTML = `
+        <div class="onboarding-highlight" style="${highlightStyle}"></div>
+        <div class="onboarding-card">
+          <div class="onboarding-step">Guia inicial · Paso ${state.onboardingStep + 1} / ${onboardingSteps.length}</div>
+          <h4>${step.title}</h4>
+          <p>${step.description}</p>
+          <div class="onboarding-actions">
+            <button class="secondary-btn" onclick="skipOnboarding()">Omitir</button>
+            ${isFirst ? '' : '<button class="secondary-btn" onclick="prevOnboardingStep()">Anterior</button>'}
+            <button class="primary-btn" onclick="nextOnboardingStep()">${isLast ? 'Finalizar' : 'Siguiente'}</button>
+          </div>
+        </div>
+      `;
+
+      app.appendChild(overlay);
+
+      if (!onboardingResizeHandler) {
+        onboardingResizeHandler = () => {
+          if (state.onboardingActive) {
+            renderOnboardingStep();
+          }
+        };
+        window.addEventListener('resize', onboardingResizeHandler);
+      }
+    }
+
+    function nextOnboardingStep() {
+      if (!state.onboardingActive) return;
+      if (state.onboardingStep < onboardingSteps.length - 1) {
+        state.onboardingStep += 1;
+        renderOnboardingStep();
+      } else {
+        closeOnboarding(true);
+        showToast('Guia completada. Ya puedes explorar libremente.');
+      }
+    }
+
+    function prevOnboardingStep() {
+      if (!state.onboardingActive) return;
+      if (state.onboardingStep > 0) {
+        state.onboardingStep -= 1;
+        renderOnboardingStep();
+      }
+    }
+
+    function skipOnboarding() {
+      closeOnboarding(true);
+      showToast('Guia omitida. Puedes comenzar a explorar.');
     }
 
     function renderPositionsList() {
@@ -314,18 +630,28 @@ const app = document.getElementById('app');
       const position = state.currentPosition ? availablePositions.find(p => p.title === state.currentPosition) : availablePositions[0];
       if (!position) return;
 
+      const careers = String(position.carrera_afin || '')
+        .split(/\n|,/)
+        .map(item => item.trim())
+        .filter(item => item && item.toLowerCase() !== 'nan');
+
       app.innerHTML = `
         <section id="department" class="screen department-screen active screen-enter">
           ${renderHud()}
           <div class="department-shell">
             <div class="department-card">
-              <div class="meta">${position.level}</div>
               <h3>${position.title}</h3>
-              <p>${position.blurb}</p>
-              <div class="chip-row">
-                ${selectedCategory ? `<span class="chip" style="background: ${selectedCategory.color}20; color: ${selectedCategory.color};">${selectedCategory.icon} ${selectedCategory.title}</span>` : ''}
-                ${position.carrera_afin ? `<span class="chip">📚 ${position.carrera_afin}</span>` : ''}
-                ${position.idioma ? `<span class="chip">🗣️ ${position.idioma}</span>` : ''}
+              <p style="margin:0 0 10px 0; color:#cfe5fa; font-size:14px;"><strong style="color:#f1f8ff;">Área:</strong> ${dep.title}</p>
+              <h5 style="margin:0 0 8px 0; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.08em;">Detalles del puesto</h5>
+              <p>${dep.description}</p>
+              ${position.speciality || position.blurb ? `<p style="margin:10px 0 0 0; color:#c8ddf2; font-size:13px;"><strong style="color:#e7f4ff;">Especialidad:</strong> ${position.speciality || position.blurb}</p>` : ''}
+              <div style="margin-top:14px; padding:14px; border-radius:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);">
+                <h5 style="margin:0 0 10px 0; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.08em;">Funciones del puesto</h5>
+                ${position.functions && position.functions.length > 0 ? `
+                  <ul style="margin:0; padding:0 0 0 18px; color:var(--muted); font-size:13px; line-height:1.5; max-height:300px; overflow:auto;">
+                    ${position.functions.map(func => `<li style="margin-bottom:7px;">${func}</li>`).join('')}
+                  </ul>
+                ` : `<div style="color:var(--muted); font-size:13px;">No hay funciones registradas para este puesto.</div>`}
               </div>
               <div class="department-stats">
                 ${position.experiencia_general && position.experiencia_general !== 'nan' ? `<div class="stat"><div class="stat-label">Exp. General</div><div class="stat-value">${position.experiencia_general} años</div></div>` : ''}
@@ -334,24 +660,30 @@ const app = document.getElementById('app');
               </div>
             </div>
             <div class="info-card">
-              <div class="meta">Detalles del puesto</div>
-              <h4 style="margin:0 0 12px 0;">${dep.title}</h4>
-              <p style="margin:0 0 14px 0; color:#dceaf8; font-size:14px; line-height:1.6;">${dep.description}</p>
-              ${position.functions && position.functions.length > 0 ? `
-                <div style="margin-top:14px;">
-                  <h5 style="margin:0 0 8px 0; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.08em;">Funciones principales</h5>
-                  <ul style="margin:0; padding:0 0 0 20px; color:var(--muted); font-size:13px;">
-                    ${position.functions.slice(0, 4).map(func => `<li style="margin-bottom:6px;">${func}</li>`).join('')}
-                    ${position.functions.length > 4 ? `<li style="margin-top:8px; font-style:italic;">... y ${position.functions.length - 4} funciones más</li>` : ''}
-                  </ul>
+              <div class="chip-row" style="margin:0 0 14px 0;">
+                ${selectedCategory ? `<span class="chip" style="background: ${selectedCategory.color}20; color: ${selectedCategory.color};">${selectedCategory.icon} ${selectedCategory.title}</span>` : ''}
+                ${position.idioma ? `<span class="chip">🗣️ ${position.idioma}</span>` : ''}
+              </div>
+              <div style="display:grid; grid-template-columns:1fr; gap:12px; margin-top:14px;">
+                <div style="padding:14px; border-radius:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);">
+                  <div style="font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;">Especialidad base</div>
+                  <div style="font-size:14px; color:#e7f4ff; font-weight:700; line-height:1.4;">${position.speciality || position.blurb || 'No definida'}</div>
                 </div>
-              ` : ''}
+                <div style="padding:14px; border-radius:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);">
+                  <h5 style="margin:0 0 10px 0; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.08em;">Carreras afines</h5>
+                  ${careers.length ? `
+                    <ul style="margin:0; padding:0 0 0 18px; color:var(--muted); font-size:13px; line-height:1.5; max-height:220px; overflow:auto;">
+                      ${careers.map(career => `<li style="margin-bottom:6px;">${career}</li>`).join('')}
+                    </ul>
+                  ` : `<div style="color:var(--muted); font-size:13px;">No hay carreras afines registradas.</div>`}
+                </div>
+              </div>
               <div class="quiz-card">
                 <div class="meta">Mini juego</div>
                 <h4 style="margin:10px 0 4px;">Pon a prueba tu comprensión</h4>
                 <p style="margin:0; color:var(--muted);">Responde correctamente para ganar XP y registrar el puesto.</p>
                 <div class="summary-actions" style="margin-top:14px;">
-                  <button class="primary-btn" onclick="startQuiz('${dep.id}')">Comenzar mini juego</button>
+                  <button class="primary-btn" onclick="startQuiz('${dep.id}', '${position.title.replace(/'/g, "\\'")}')">Comenzar mini juego</button>
                   <button class="secondary-btn" onclick="renderScreen('positions')">Volver a puestos</button>
                   <button class="secondary-btn" onclick="renderScreen('map')">Volver al mapa</button>
                 </div>
@@ -365,7 +697,30 @@ const app = document.getElementById('app');
 
     function renderQuizScene() {
       const dep = departments.find(d => d.id === state.currentDepartment);
-      const question = dep.quiz[state.currentQuizIndex];
+      if (!dep) return;
+      const quizSet = getCurrentQuizSet(dep);
+      if (!quizSet.length) {
+        app.innerHTML = `
+          <section id="quiz" class="screen department-screen active screen-enter">
+            ${renderHud()}
+            <div class="department-shell">
+              <div class="department-card">
+                <div class="meta">Mini juego · ${dep.title}</div>
+                <h3>No hay preguntas disponibles para este puesto.</h3>
+                <p>Selecciona otro puesto para continuar explorando.</p>
+              </div>
+              <div class="info-card">
+                <div class="summary-actions">
+                  <button class="secondary-btn" onclick="renderScreen('department')">Volver al puesto</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        `;
+        updateHud();
+        return;
+      }
+      const question = quizSet[state.currentQuizIndex];
       app.innerHTML = `
         <section id="quiz" class="screen department-screen active screen-enter">
           ${renderHud()}
@@ -378,7 +733,7 @@ const app = document.getElementById('app');
             </div>
             <div class="info-card">
               <div class="meta">Progreso</div>
-              <h3>Pregunta ${state.currentQuizIndex + 1} / ${dep.quiz.length}</h3>
+              <h3>Pregunta ${state.currentQuizIndex + 1} / ${quizSet.length}</h3>
               <p>Después de cada respuesta correcta, se desbloqueará una nueva pieza de la colección y una medalla de progreso.</p>
               <div class="summary-actions">
                 <button class="secondary-btn" onclick="renderScreen('department')">Volver al puesto</button>
@@ -503,6 +858,9 @@ const app = document.getElementById('app');
 
     function renderHud() {
       const percent = Math.min(100, (state.xp % 100));
+      const missionSummary = window.MissionEngine
+        ? MissionEngine.getSummary(state)
+        : { completed: 0, total: 0 };
       return `
         <div class="hud">
           <div class="hud-card">
@@ -511,7 +869,7 @@ const app = document.getElementById('app');
               <div class="value">${state.level}</div>
             </div>
           </div>
-          <div class="hud-card xp-pill">
+          <div class="hud-card xp-pill" data-guide="hud-xp">
             <div style="flex:1;">
               <div class="label">XP</div>
               <div class="value">${state.xp} / ${state.level * 100}</div>
@@ -520,23 +878,11 @@ const app = document.getElementById('app');
           </div>
           <div class="hud-card">
             <div>
-              <div class="label">Puestos</div>
-              <div class="value">${state.discoveredPositions.length}</div>
-            </div>
-          </div>
-          <div class="hud-card">
-            <div>
               <div class="label">Misiones</div>
-              <div class="value">${state.completedQuizzes}/${departments.length}</div>
+              <div class="value">${missionSummary.completed}/${missionSummary.total}</div>
             </div>
           </div>
-          <div class="hud-btns">
-            <button
-              class="hud-btn"
-              onclick="renderScreen('profile')"
-            >
-              👤 Perfil
-            </button>
+          <div class="hud-btns" data-guide="hud-actions">
             <button
               class="hud-btn"
               onclick="openPassport()"
@@ -545,15 +891,21 @@ const app = document.getElementById('app');
             </button>
             <button
               class="hud-btn"
-              onclick="openCollection()"
+              onclick="openMissionBoard()"
             >
-              🏆 Colección
+              🎯 Misiones
             </button>
             <button
               class="hud-btn"
               onclick="renderScreen('map')"
             >
               🗺️ Mapa
+            </button>
+            <button
+              class="hud-btn"
+              onclick="renderScreen('profile')"
+            >
+              👤 Perfil
             </button>
           </div>
         </div>
@@ -584,6 +936,11 @@ const app = document.getElementById('app');
 
     function selectRole(roleId) {
       state.currentRole = roleId;
+      const categories = window.positionCategories || [];
+      state.currentCategory = categories.some(category => category.id === roleId)
+        ? roleId
+        : null;
+      state.categoryMenuOpen = false;
       state.startedAt = Date.now();
       state.avatarPosition = { x: 150, y: 330 };
       const profile = window.CareerProfileData ? CareerProfileData.getProfile() : null;
@@ -597,6 +954,126 @@ const app = document.getElementById('app');
 
     function openCollection() {
       renderScreen('collection');
+    }
+
+    function applyMissionRewards() {
+      if (!window.MissionEngine) return;
+
+      const completedMissions = MissionEngine.getCompletedMissions(state);
+      completedMissions.forEach(mission => {
+        if (!mission || !mission.id) return;
+        if (state.missionRewardsClaimed.includes(mission.id)) return;
+
+        state.missionRewardsClaimed.push(mission.id);
+        gainXP(Number(mission.rewardXP) || 0);
+        unlockAchievement(`Misión completada: ${mission.title}`);
+        showToast(`+${mission.rewardXP} XP por misión: ${mission.title}`);
+      });
+    }
+
+    function renderMissionBoardContent(stateSnapshot) {
+      const missions = MissionEngine.getAllMissions(stateSnapshot);
+      const completedMissions = MissionEngine.getCompletedMissions(stateSnapshot);
+      const activeMissions = MissionEngine.getActiveMissions(stateSnapshot);
+      const summary = MissionEngine.getSummary(stateSnapshot);
+
+      return `
+        <section class="mission-board-screen">
+          <div class="mission-board-card">
+            <div class="mission-board-header">
+              <div>
+                <span class="eyebrow">🎯 Mission Board</span>
+                <h2>Misiones de Career Quest</h2>
+                <p>Revisa tu progreso actual y completa objetivos para seguir explorando.</p>
+              </div>
+              <div class="mission-board-summary">
+                <strong>${summary.completed} / ${summary.total}</strong>
+                <span>misiones completadas</span>
+                <small>Activas: ${activeMissions.length} · Completadas: ${completedMissions.length}</small>
+              </div>
+            </div>
+            <div class="mission-list">
+              ${missions.map(mission => {
+                const target = Math.max(1, Number(mission.target) || 1);
+                const progressValue = Math.min(target, Number(mission.progress) || 0);
+                const percent = Math.min(100, Math.round((progressValue / target) * 100));
+                return `
+                  <article class="mission-item ${mission.completed ? 'completed' : 'active'}">
+                    <div class="mission-title-row">
+                      <div class="mission-title-wrap">
+                        <span class="mission-icon">${mission.icon || '🎯'}</span>
+                        <div>
+                          <h3>${mission.title}</h3>
+                          <p>${mission.description}</p>
+                          ${mission.guide ? `<small style="display:block; margin-top:6px; color:#b5cee4; line-height:1.45;"><strong style="color:#d9ecff;">Cómo completar:</strong> ${mission.guide}</small>` : ''}
+                        </div>
+                      </div>
+                      <span class="mission-state ${mission.completed ? 'completed' : 'active'}">
+                        ${mission.completed ? '✓ COMPLETADA' : '• ACTIVA'}
+                      </span>
+                    </div>
+                    <div class="mission-progress-row">
+                      <strong>Progreso: ${progressValue} / ${target}</strong>
+                      <span>${percent}%</span>
+                    </div>
+                    <div class="mission-progress-bar">
+                      <span style="width:${percent}%;"></span>
+                    </div>
+                    <div class="mission-reward">
+                      ⭐ ${mission.completed ? 'Recompensa obtenida' : 'Recompensa'}: +${mission.rewardXP} XP
+                    </div>
+                  </article>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function openMissionBoard() {
+      if (!window.MissionEngine || !window.MISSION_DATA) {
+        showToast('No se pudo abrir Mission Board. Revisa los scripts de misión.');
+        return;
+      }
+
+      const existingOverlay = document.getElementById('missionOverlay');
+      if (existingOverlay) {
+        existingOverlay.remove();
+      }
+
+      const missionContainer = document.createElement('div');
+      missionContainer.id = 'missionOverlay';
+      missionContainer.className = 'mission-overlay';
+      missionContainer.innerHTML = renderMissionBoardContent(state);
+      app.appendChild(missionContainer);
+
+      const closeButton = document.createElement('button');
+      closeButton.className = 'mission-close';
+      closeButton.innerHTML = '✕';
+      closeButton.setAttribute('aria-label', 'Cerrar Mission Board');
+
+      const handleEscape = (event) => {
+        if (event.key === 'Escape') {
+          closeMissionBoard();
+        }
+      };
+
+      const closeMissionBoard = () => {
+        missionContainer.remove();
+        document.removeEventListener('keydown', handleEscape);
+      };
+
+      closeButton.onclick = closeMissionBoard;
+
+      missionContainer.addEventListener('click', (event) => {
+        if (event.target === missionContainer) {
+          closeMissionBoard();
+        }
+      });
+
+      document.addEventListener('keydown', handleEscape);
+      missionContainer.appendChild(closeButton);
     }
     
     function openPassport() {
@@ -622,9 +1099,23 @@ const app = document.getElementById('app');
         passportContainer
       );
 
+      const missionSummary = window.MissionEngine
+        ? MissionEngine.getSummary(state)
+        : { completed: 0, total: 0 };
+      const completedMissions = Number(missionSummary.completed) || 0;
+      const requiredMissions = Math.max(
+        REQUIRED_MISSIONS_FOR_PASSPORT_DOWNLOAD,
+        Number(missionSummary.total) || REQUIRED_MISSIONS_FOR_PASSPORT_DOWNLOAD
+      );
+
       CareerPassport.render(
         passportContainer,
-        state
+        state,
+        {
+          canDownloadPassport: completedMissions >= REQUIRED_MISSIONS_FOR_PASSPORT_DOWNLOAD,
+          missionProgressText: `${completedMissions}/${requiredMissions}`,
+          requiredMissions: REQUIRED_MISSIONS_FOR_PASSPORT_DOWNLOAD
+        }
       );
 
       const closeButton =
@@ -668,12 +1159,88 @@ const app = document.getElementById('app');
 
     }
 
+    function ensureHtml2Canvas() {
+      if (window.html2canvas) {
+        return Promise.resolve(window.html2canvas);
+      }
+      if (html2CanvasLoaderPromise) {
+        return html2CanvasLoaderPromise;
+      }
+
+      html2CanvasLoaderPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        script.async = true;
+        script.onload = () => resolve(window.html2canvas);
+        script.onerror = () => reject(new Error('No se pudo cargar html2canvas'));
+        document.head.appendChild(script);
+      });
+
+      return html2CanvasLoaderPromise;
+    }
+
+    async function downloadCareerPassport() {
+      const missionSummary = window.MissionEngine
+        ? MissionEngine.getSummary(state)
+        : { completed: 0, total: 0 };
+      const completedMissions = Number(missionSummary.completed) || 0;
+      if (completedMissions < REQUIRED_MISSIONS_FOR_PASSPORT_DOWNLOAD) {
+        showToast(`Completa ${REQUIRED_MISSIONS_FOR_PASSPORT_DOWNLOAD} misiones para descargar tu Passport.`);
+        return;
+      }
+
+      const passportCard = document.querySelector('#passportOverlay .passport-card');
+      if (!passportCard) {
+        showToast('Abre tu Passport para capturarlo.');
+        return;
+      }
+
+      const actionsPanel = passportCard.querySelector('.passport-download-panel');
+      const originalVisibility = actionsPanel ? actionsPanel.style.visibility : '';
+
+      try {
+        if (actionsPanel) actionsPanel.style.visibility = 'hidden';
+        showToast('Generando captura del Passport...');
+
+        const html2canvas = await ensureHtml2Canvas();
+        const scale = Math.min(2, Math.max(1, window.devicePixelRatio || 1.25));
+        const canvas = await html2canvas(passportCard, {
+          backgroundColor: '#07101d',
+          scale,
+          useCORS: true,
+          logging: false
+        });
+
+        const profile = window.CareerProfileData ? CareerProfileData.getProfile() : null;
+        const profileName = (profile && profile.name) ? profile.name : 'Jugador';
+        const safeName = String(profileName)
+          .replace(/[^a-zA-Z0-9_-]+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || 'jugador';
+        const stamp = new Date().toISOString().slice(0, 10);
+        const fileName = `passport-${safeName}-${stamp}.png`;
+
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = fileName;
+        link.click();
+
+        showToast('Passport descargado correctamente.');
+      } catch (error) {
+        showToast('No se pudo generar la captura del Passport.');
+      } finally {
+        if (actionsPanel) actionsPanel.style.visibility = originalVisibility;
+      }
+    }
+
     function enterDepartment(depId) {
       if (state.moving) return;
       const dep = departments.find(d => d.id === depId);
+      if (!dep) return;
       state.pendingDepartment = depId;
       moveAvatarTo({ x: dep.x, y: dep.y }, () => {
         state.currentDepartment = state.pendingDepartment;
+        trackDepartmentVisit(state.currentDepartment);
         state.currentPosition = null;
         state.currentQuizIndex = 0;
         state.quizAnswered = false;
@@ -685,14 +1252,16 @@ const app = document.getElementById('app');
 
     function selectPosition(positionTitle) {
       state.currentPosition = positionTitle;
+      trackPositionVisit(positionTitle);
       state.currentQuizIndex = 0;
       state.quizAnswered = false;
       state.quizSelection = [];
       renderScreen('department');
     }
 
-    function startQuiz(depId) {
+    function startQuiz(depId, positionTitle) {
       state.currentDepartment = depId;
+      if (positionTitle) state.currentPosition = positionTitle;
       state.currentQuizIndex = 0;
       state.quizAnswered = false;
       state.quizSelection = [];
@@ -701,7 +1270,13 @@ const app = document.getElementById('app');
 
     function answerQuiz(value) {
       const dep = departments.find(d => d.id === state.currentDepartment);
-      const question = dep.quiz[state.currentQuizIndex];
+      if (!dep) return;
+      const quizSet = getCurrentQuizSet(dep);
+      const question = quizSet[state.currentQuizIndex];
+      if (!question) {
+        renderScreen('department');
+        return;
+      }
       const buttons = document.querySelectorAll('.quiz-option, .quiz-step');
       buttons.forEach(btn => btn.disabled = true);
       const isCorrect = question.type === 'boolean'
@@ -709,14 +1284,20 @@ const app = document.getElementById('app');
         : question.type === 'choice'
           ? value === question.answer
           : false;
+      state.quizAttempts += 1;
+      applyMissionRewards();
       if (isCorrect) {
         gainXP(40);
         addDiscovery(dep);
         unlockAchievement(`${dep.title} en acción`);
         state.completedQuizzes += 1;
+        applyMissionRewards();
+        showToast('✅ ¡Respuesta correcta! +40 XP');
+      } else {
+        showToast('❌ Respuesta incorrecta');
       }
       setTimeout(() => {
-        if (state.currentQuizIndex < dep.quiz.length - 1) {
+        if (state.currentQuizIndex < quizSet.length - 1) {
           state.currentQuizIndex += 1;
           state.quizSelection = [];
           renderScreen('quiz');
@@ -739,16 +1320,28 @@ const app = document.getElementById('app');
 
     function submitSequenceAnswer() {
       const dep = departments.find(d => d.id === state.currentDepartment);
-      const question = dep.quiz[state.currentQuizIndex];
+      if (!dep) return;
+      const quizSet = getCurrentQuizSet(dep);
+      const question = quizSet[state.currentQuizIndex];
+      if (!question || !Array.isArray(question.answer)) {
+        renderScreen('quiz');
+        return;
+      }
+      state.quizAttempts += 1;
+      applyMissionRewards();
       const isCorrect = state.quizSelection.length === question.answer.length && question.answer.every((value, index) => value === state.quizSelection[index]);
       if (isCorrect) {
         gainXP(40);
         addDiscovery(dep);
         unlockAchievement(`${dep.title} en acción`);
         state.completedQuizzes += 1;
+        applyMissionRewards();
+        showToast('✅ ¡Respuesta correcta! +40 XP');
+      } else {
+        showToast('❌ Respuesta incorrecta');
       }
       setTimeout(() => {
-        if (state.currentQuizIndex < dep.quiz.length - 1) {
+        if (state.currentQuizIndex < quizSet.length - 1) {
           state.currentQuizIndex += 1;
           state.quizSelection = [];
           renderScreen('quiz');
@@ -763,6 +1356,25 @@ const app = document.getElementById('app');
       if (state.currentPosition && !state.discoveredPositions.includes(state.currentPosition)) {
         state.discoveredPositions.push(state.currentPosition);
       }
+      applyMissionRewards();
+    }
+
+    function trackDepartmentVisit(depId) {
+      if (!depId) return;
+      if (state.visitedDepartments.includes(depId)) return;
+      state.visitedDepartments.push(depId);
+      gainXP(XP_FOR_NEW_DEPARTMENT_VISIT);
+      showToast(`🧭 Área visitada por primera vez. +${XP_FOR_NEW_DEPARTMENT_VISIT} XP`);
+      applyMissionRewards();
+    }
+
+    function trackPositionVisit(positionTitle) {
+      if (!positionTitle) return;
+      if (state.visitedPositions.includes(positionTitle)) return;
+      state.visitedPositions.push(positionTitle);
+      gainXP(XP_FOR_NEW_POSITION_VISIT);
+      showToast(`💼 Puesto explorado por primera vez. +${XP_FOR_NEW_POSITION_VISIT} XP`);
+      applyMissionRewards();
     }
 
     function gainXP(amount) {
@@ -853,9 +1465,12 @@ const app = document.getElementById('app');
       state.currentQuizIndex = 0;
       state.discoveredDepartments = [];
       state.discoveredPositions = [];
+      state.visitedDepartments = [];
+      state.visitedPositions = [];
       state.xp = 0;
       state.level = 1;
       state.completedQuizzes = 0;
+      state.quizAttempts = 0;
       state.achievements = [];
       state.quizAnswered = false;
       state.quizLocked = false;
@@ -863,6 +1478,7 @@ const app = document.getElementById('app');
       state.moving = false;
       state.quizSelection = [];
       state.pendingDepartment = null;
+      state.missionRewardsClaimed = [];
       renderScreen('welcome');
     }
 
@@ -893,12 +1509,16 @@ const app = document.getElementById('app');
 
     function renderDepartmentBuilding(dep) {
       const accent = dep.color;
+      const isDiscovered = state.discoveredDepartments.includes(dep.id);
+      const strokeColor = isDiscovered ? '#7df2c9' : accent;
+      const innerFill = isDiscovered ? 'rgba(125,242,201,0.24)' : `${accent}2E`;
       return `
         <g class="building" onclick="enterDepartment('${dep.id}')" transform="translate(${dep.x}, ${dep.y})">
-          <circle r="50" fill="${accent}" opacity="0.12"/>
-          <circle r="50" fill="none" stroke="${accent}" stroke-width="3" stroke-dasharray="8 5" opacity="0.75"/>
-          <circle r="22" fill="rgba(8,14,24,0.9)" stroke="${accent}" stroke-width="2.5"/>
-          <text x="0" y="8" text-anchor="middle" font-size="18" fill="${accent}">${dep.icon}</text>
+          <circle r="64" fill="${strokeColor}" opacity="0.14"/>
+          <circle r="52" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-dasharray="10 6" opacity="0.92"/>
+          <circle r="36" fill="rgba(7,14,25,0.96)" stroke="${strokeColor}" stroke-width="3"/>
+          <circle r="23" fill="${innerFill}" stroke="${strokeColor}" stroke-width="2"/>
+          <circle r="8" fill="#f7fbff" opacity="0.98"/>
         </g>
       `;
     }
@@ -1010,6 +1630,32 @@ const app = document.getElementById('app');
       osc.stop(now + 0.16);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
     }
+
+    // Exponer explícitamente callbacks usados en atributos onclick para
+    // compatibilidad consistente entre navegadores (incluyendo Safari/iPad).
+    window.startAdventure = startAdventure;
+    window.renderScreen = renderScreen;
+    window.toggleCategoryMenu = toggleCategoryMenu;
+    window.filterByCategory = filterByCategory;
+    window.clearCategoryFilter = clearCategoryFilter;
+    window.selectRole = selectRole;
+    window.openCollection = openCollection;
+    window.openPassport = openPassport;
+    window.openMissionBoard = openMissionBoard;
+    window.enterDepartment = enterDepartment;
+    window.selectPosition = selectPosition;
+    window.startQuiz = startQuiz;
+    window.answerQuiz = answerQuiz;
+    window.submitSequenceStep = submitSequenceStep;
+    window.clearSequence = clearSequence;
+    window.submitSequenceAnswer = submitSequenceAnswer;
+    window.nextOnboardingStep = nextOnboardingStep;
+    window.prevOnboardingStep = prevOnboardingStep;
+    window.skipOnboarding = skipOnboarding;
+    window.downloadCareerPassport = downloadCareerPassport;
+    window.showInterest = showInterest;
+    window.resetGame = resetGame;
+    window.showToast = showToast;
 
     init();
 window.addEventListener("load", () => {
