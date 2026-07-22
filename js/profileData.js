@@ -11,6 +11,7 @@
 
     const DEFAULT_PROFILE = {
         name: '',
+        mcpCode: '',
         currentArea: '',
         createdAt: null,
         completed: false

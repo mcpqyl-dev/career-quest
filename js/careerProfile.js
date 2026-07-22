@@ -94,7 +94,7 @@
                             <div class="form-group">
 
                                 <label for="profileName">
-                                    ¿Cómo quieres que te llamemos?
+                                    Dinos tu nombre y apellido
                                 </label>
 
                                 <input
@@ -103,9 +103,33 @@
                                     type="text"
                                     maxlength="30"
                                     autocomplete="off"
-                                    placeholder="Escribe tu nombre o alias"
+                                    placeholder="Escribe tu nombre y apellido"
                                     value="${this.escape(
                                         profile.name || ''
+                                    )}"
+                                    required
+                                >
+
+                            </div>
+
+
+                            <div class="form-group">
+
+                                <label for="profileMcpCode">
+                                    Escribe tu codigo de MCP (solo numeros)
+                                </label>
+
+                                <input
+                                    id="profileMcpCode"
+                                    name="profileMcpCode"
+                                    type="text"
+                                    inputmode="numeric"
+                                    pattern="[0-9]+"
+                                    maxlength="12"
+                                    autocomplete="off"
+                                    placeholder="Ejemplo: 123456"
+                                    value="${this.escape(
+                                        profile.mcpCode || ''
                                     )}"
                                     required
                                 >
@@ -197,11 +221,28 @@
                             .value
                             .trim();
 
+                    const mcpCode =
+                        container
+                            .querySelector('#profileMcpCode')
+                            .value
+                            .trim();
+
 
                     if (!name) {
 
                         this.showValidation(
-                            'Escribe tu nombre o alias.'
+                            'Escribe tu nombre y apellido.'
+                        );
+
+                        return;
+
+                    }
+
+
+                    if (!mcpCode || !/^\d+$/.test(mcpCode)) {
+
+                        this.showValidation(
+                            'Escribe tu codigo de MCP usando solo numeros.'
                         );
 
                         return;
@@ -225,6 +266,8 @@
                             .saveProfile({
 
                                 name,
+
+                                mcpCode,
 
                                 currentArea
 

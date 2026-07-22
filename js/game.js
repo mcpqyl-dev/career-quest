@@ -52,6 +52,11 @@ const app = document.getElementById('app');
         selector: '[data-guide="hud-actions"]',
         title: 'Accesos rapidos',
         description: 'Desde aqui abres Passport, Misiones, Mapa y Perfil en cualquier momento.'
+      },
+      {
+        selector: '[data-guide="passport-btn"]',
+        title: 'Passport final',
+        description: 'Cuando completes tus misiones, descarga tu pasaporte y envialo.'
       }
     ];
     let onboardingResizeHandler = null;
@@ -944,6 +949,7 @@ const app = document.getElementById('app');
           <div class="hud-btns" data-guide="hud-actions">
             <button
               class="hud-btn"
+              data-guide="passport-btn"
               onclick="openPassport()"
             >
               📖 Passport
