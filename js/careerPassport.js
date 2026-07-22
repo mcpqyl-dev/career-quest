@@ -11,38 +11,25 @@
 
         getStats(state) {
 
-            const discoveredDepartments =
-                state?.discoveredDepartments?.length || 0;
-
-            const discoveredPositions =
-                state?.discoveredPositions?.length || 0;
-
-            const completedQuizzes =
-                state?.completedQuizzes || 0;
-
-            const achievements =
-                state?.achievements?.length || 0;
-
-            const xp =
-                state?.xp || 0;
-
-            const level =
-                state?.level || 1;
-
-
             return {
 
-                discoveredDepartments,
+                discoveredDepartments:
+                     state?.discoveredDepartments?.length || 0,
 
-                discoveredPositions,
+                discoveredPositions:
+                     state?.discoveredPositions?.length || 0,
 
-                completedQuizzes,
+                completedQuizzes:
+                    state?.completedQuizzes || 0,
 
-                achievements,
+                achievements:
+                    state?.achievements?.length || 0,
 
-                xp,
+                xp:
+                    state?.xp || 0,
 
-                level
+                level:
+                    state?.level || 1
 
             };
 
@@ -61,36 +48,19 @@
 
             const stats =
                 this.getStats(state);
-
-
-            const nextLevelXP =
-                stats.level * 500;
-
-
-            const previousLevelXP =
-                (stats.level - 1) * 500;
-
+            const requiredXP =
+                stats.level * 100;
 
             const progressXP =
-                Math.max(
-                    0,
-                    stats.xp - previousLevelXP
-                );
-
-
-            const requiredXP =
-                Math.max(
-                    1,
-                    nextLevelXP -
-                    previousLevelXP
-                );
-
+                stats.xp;
 
             const progress =
                 Math.min(
                     100,
                     (progressXP / requiredXP) * 100
-                );
+        );
+
+            
 
 
             container.innerHTML = `

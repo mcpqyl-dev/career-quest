@@ -482,8 +482,24 @@ const app = document.getElementById('app');
             </div>
           </div>
           <div class="hud-btns">
-            <button class="hud-btn" onclick="openCollection()">Colección</button>
-            <button class="hud-btn" onclick="renderScreen('map')">Mapa</button>
+            <button
+              class="hud-btn"
+              onclick="openPassport()"
+            >
+              📖 Passport
+            </button>
+            <button
+              class="hud-btn"
+              onclick="openCollection()"
+            >
+              🏆 Colección
+            </button>
+            <button
+              class="hud-btn"
+              onclick="renderScreen('map')"
+            >
+              🗺️ Mapa
+            </button>
           </div>
         </div>
       `;
@@ -526,6 +542,53 @@ const app = document.getElementById('app');
 
     function openCollection() {
       renderScreen('collection');
+    }
+    
+    function openPassport() {
+
+      const passportContainer =
+        document.createElement('div');
+
+      passportContainer.id =
+        'passportOverlay';
+
+      passportContainer.className =
+        'passport-overlay';
+
+      app.appendChild(
+        passportContainer
+      );
+
+      CareerPassport.render(
+        passportContainer,
+        state
+      );
+
+      const closeButton =
+        document.createElement('button');
+
+      closeButton.className =
+        'passport-close';
+
+      closeButton.innerHTML =
+        '✕';
+
+      closeButton.setAttribute(
+        'aria-label',
+        'Cerrar Passport'
+      );
+
+      closeButton.onclick =
+        () => {
+
+            passportContainer.remove();
+
+        };
+
+      passportContainer.appendChild(
+        closeButton
+      );
+
     }
 
     function enterDepartment(depId) {

@@ -969,3 +969,144 @@
     }
 
 }
+/* =========================================================
+   CAREER QUEST v1.1
+   PASSPORT OVERLAY
+========================================================= */
+
+.passport-overlay {
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 100;
+
+    overflow-y: auto;
+
+    display: grid;
+
+    place-items: center;
+
+    padding: 30px;
+
+    background:
+        rgba(2, 6, 12, 0.78);
+
+    backdrop-filter:
+        blur(14px);
+
+    animation:
+        passportFadeIn
+        .25s
+        ease
+        forwards;
+
+}
+
+
+.passport-overlay .passport-screen {
+
+    position: relative;
+
+    inset: auto;
+
+    width: 100%;
+
+    min-height: 100%;
+
+    display: grid;
+
+    place-items: center;
+
+    background: transparent;
+
+}
+
+
+.passport-close {
+
+    position: absolute;
+
+    top: 22px;
+
+    right: 22px;
+
+    z-index: 120;
+
+    width: 42px;
+
+    height: 42px;
+
+    display: grid;
+
+    place-items: center;
+
+    border-radius: 50%;
+
+    border:
+        1px solid
+        rgba(255,255,255,.15);
+
+    background:
+        rgba(7,16,29,.8);
+
+    color:
+        #ffffff;
+
+    font-size: 18px;
+
+    cursor: pointer;
+
+    transition:
+        transform .2s ease,
+        background .2s ease;
+
+}
+
+
+.passport-close:hover {
+
+    transform:
+        scale(1.08);
+
+    background:
+        rgba(76,201,240,.2);
+
+}
+
+
+@keyframes passportFadeIn {
+
+    from {
+
+        opacity: 0;
+
+    }
+
+    to {
+
+        opacity: 1;
+
+    }
+
+}
+
+
+@media (max-width: 700px) {
+
+    .passport-overlay {
+
+        padding: 15px;
+
+    }
+
+    .passport-close {
+
+        top: 12px;
+
+        right: 12px;
+
+    }
+
+}
