@@ -111,7 +111,7 @@
     .avatar.walking .leg.right { animation: stepRight  .42s ease-in-out infinite alternate; transform-origin: 0 0; }
 
     .department-screen { background: linear-gradient(120deg, rgba(8,16,33,0.98), rgba(5,11,20,0.97)); padding:24px 24px 28px; }
-    .department-shell { display:grid; grid-template-columns:1.05fr 0.95fr; gap:22px; height:100%; }
+    .department-shell { display:grid; grid-template-columns:1.05fr 0.95fr; gap:22px; height:100%; min-height:0; }
     .department-card, .info-card { background: linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025)); border:1px solid rgba(255,255,255,0.1); border-radius:28px; padding:24px; backdrop-filter: blur(16px); position:relative; overflow:hidden; }
     .department-card::before { content:""; position:absolute; inset:auto -20% -20% auto; width:240px; height:240px; background:radial-gradient(circle, rgba(76,201,240,0.16), transparent 70%); }
     .department-card .meta, .info-card .meta { color:#86dfff; font-size:12px; text-transform:uppercase; letter-spacing:.18em; }
@@ -239,7 +239,10 @@
             overflow:hidden;
         }
         .map-shell { padding:0; border-radius:16px; }
-      .department-screen { padding:14px; }
+    .department-screen { padding:14px; overflow-y:auto; }
+    .department-shell { height:auto; min-height:0; display:flex; flex-direction:column; gap:14px; }
+    .department-card, .info-card { overflow:visible; max-height:none; }
+    .position-list { max-height:none; }
       .map-world { width:100%; height:100%; }
             .hud-btn, .primary-btn, .secondary-btn { padding:10px 12px; font-size:14px; }
             .hud-btn { height:42px; width:100%; white-space:normal; line-height:1.2; }

@@ -465,8 +465,11 @@ const app = document.getElementById('app');
       const selectedCategory = categories.find(c => c.id === state.currentCategory);
       const isMobileViewport = window.innerWidth <= 760;
       const categoryPanelStyle = isMobileViewport
-        ? 'position: absolute; top: 84px; left: 10px; right: 10px; z-index: 100; min-width: 0;'
+        ? 'position: relative; z-index: 25; min-width: 0; width: 100%; margin-bottom: 10px;'
         : 'position: absolute; top: 96px; left: 24px; z-index: 100; min-width: 210px;';
+      const categoryMenuStyle = isMobileViewport
+        ? 'background: rgba(10, 18, 38, 0.96); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-top: none; border-radius: 0 0 12px 12px; overflow-y: auto; max-height: 42dvh; box-shadow: 0 8px 24px rgba(0,0,0,0.5);'
+        : 'background: rgba(10, 18, 38, 0.96); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-top: none; border-radius: 0 0 12px 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5);';
       
       // Filtrar departamentos si hay categoría seleccionada
       const visibleDepartments = state.currentCategory 
@@ -485,7 +488,11 @@ const app = document.getElementById('app');
               <span style="font-size:11px; color:rgba(255,255,255,0.45); display:inline-block; transform: rotate(${state.categoryMenuOpen ? '180deg' : '0deg'});">▼</span>
             </button>
             ${state.categoryMenuOpen ? `
-            <div style="background: rgba(10, 18, 38, 0.96); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-top: none; border-radius: 0 0 12px 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+            <div style="${categoryMenuStyle}">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03);">
+                <span style="font-size:12px; color:#c8dff5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${selectedCategory ? `Filtro activo: ${selectedCategory.title}` : 'Sin filtro activo'}</span>
+                <button onclick="closeCategoryMenu()" style="border:none; border-radius:8px; background:rgba(255,255,255,0.08); color:#e6f2ff; padding:6px 10px; font-size:12px; cursor:pointer;">Cerrar</button>
+              </div>
               ${categories.map(cat => `
                 <button onclick="filterByCategory('${cat.id}')" style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: ${state.currentCategory === cat.id ? cat.color + '20' : 'transparent'}; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); color: ${state.currentCategory === cat.id ? cat.color : '#c8dff5'}; font-size: 13px; cursor: pointer; width: 100%; text-align: left; font-weight: ${state.currentCategory === cat.id ? '700' : '400'};">
                   <span style="font-size:15px;">${cat.icon}</span>
@@ -493,9 +500,10 @@ const app = document.getElementById('app');
                   ${state.currentCategory === cat.id ? `<span style="margin-left:auto; width:6px; height:6px; border-radius:50%; background:${cat.color};"></span>` : ''}
                 </button>
               `).join('')}
-              ${state.currentCategory ? `
-                <button onclick="clearCategoryFilter()" style="display:flex; align-items:center; gap:8px; padding: 10px 16px; background: transparent; border: none; color: #8fafc8; font-size: 12px; cursor: pointer; width: 100%; text-align: left;">✕ Ver todas las áreas</button>
-              ` : ''}
+              <div style="display:flex; gap:8px; padding:10px 12px; border-top:1px solid rgba(255,255,255,0.08);">
+                <button onclick="clearCategoryFilter()" style="flex:1; border:1px solid rgba(255,255,255,0.12); border-radius:10px; background:transparent; color:#b7cfe6; padding:9px 10px; font-size:12px; cursor:pointer;">Ver todas las áreas</button>
+                <button onclick="closeCategoryMenu()" style="flex:1; border:1px solid rgba(100, 200, 255, 0.3); border-radius:10px; background:rgba(76,201,240,0.14); color:#dff6ff; padding:9px 10px; font-size:12px; cursor:pointer;">Listo</button>
+              </div>
             </div>` : ''}
           </div>
           <div class="map-backdrop"></div>
@@ -995,6 +1003,7 @@ const app = document.getElementById('app');
     }
 
     function filterByCategory(categoryId) {
+      const isMobileViewport = window.innerWidth <= 760;
       const categories = getAvailableCategories();
       const exists = categories.some(category => category.id === categoryId);
       if (!exists) {
@@ -1002,12 +1011,18 @@ const app = document.getElementById('app');
       } else {
         state.currentCategory = categoryId === state.currentCategory ? null : categoryId;
       }
-      state.categoryMenuOpen = false;
+      state.categoryMenuOpen = isMobileViewport;
       renderScreen('map');
     }
 
     function clearCategoryFilter() {
+      const isMobileViewport = window.innerWidth <= 760;
       state.currentCategory = null;
+      state.categoryMenuOpen = isMobileViewport;
+      renderScreen('map');
+    }
+
+    function closeCategoryMenu() {
       state.categoryMenuOpen = false;
       renderScreen('map');
     }
@@ -1876,6 +1891,7 @@ const app = document.getElementById('app');
     window.startAdventure = startAdventure;
     window.renderScreen = renderScreen;
     window.toggleCategoryMenu = toggleCategoryMenu;
+    window.closeCategoryMenu = closeCategoryMenu;
     window.filterByCategory = filterByCategory;
     window.clearCategoryFilter = clearCategoryFilter;
     window.selectRole = selectRole;
