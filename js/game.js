@@ -1,6 +1,14 @@
 const app = document.getElementById('app');
 
-    const roleOptions = (window.roleOptions || []).map(role => ({ ...role }));
+    const roleOptions = ((window.positionCategories && window.positionCategories.length)
+      ? window.positionCategories
+      : (window.roleOptions || [])).map(role => ({
+      id: role.id,
+      title: role.title,
+      icon: role.icon,
+      description: role.description,
+      color: role.color
+    }));
     const departments = (window.departments || []).map(dep => ({ ...dep }));
 
     // Asignar quizzes a cada departamento
@@ -69,6 +77,8 @@ const app = document.getElementById('app');
       playTone('transition');
       if (name === 'splash') renderSplash();
       else if (name === 'welcome') renderWelcome();
+      else if (name === 'role') renderRoleSelection();
+      else if (name === 'profile') renderProfileScreen();
       else if (name === 'map') renderMap();
       else if (name === 'positions') renderPositionsList();
       else if (name === 'department') renderDepartmentScene();
@@ -107,7 +117,7 @@ const app = document.getElementById('app');
               <span class="eyebrow">Inicio de misión</span>
               <h2>En Chinalco creemos que el crecimiento comienza cuando conocemos nuevos desafíos.</h2>
               <div class="typing" id="typingText"></div>
-              <button class="hero-button" onclick="renderScreen('map')">Comenzar aventura</button>
+              <button class="hero-button" onclick="renderScreen('role')">Comenzar aventura</button>
             </div>
             <div class="right-pane">
               <div class="hero-badge">
@@ -127,6 +137,45 @@ const app = document.getElementById('app');
       `;
       const text = 'Hoy iniciarás una aventura para descubrir oportunidades dentro de la organización y conocer cómo la movilidad horizontal puede abrirte nuevas puertas.';
       typeWriter(text, 'typingText');
+    }
+
+    function renderRoleSelection() {
+      app.innerHTML = `
+        <section id="selection" class="screen selection active screen-enter">
+          <div class="section-header">
+            <div>
+              <h3>Selecciona tu rol</h3>
+              <p>Elige el perfil con el que quieres iniciar tu exploración.</p>
+            </div>
+            <button class="secondary-btn" onclick="renderScreen('welcome')">Volver</button>
+          </div>
+          <div class="role-grid">
+            ${roleOptions.map(role => `
+              <article class="role-card" onclick="selectRole('${role.id}')" style="border-color:${role.color}44;">
+                <div class="icon">${role.icon || '🎯'}</div>
+                <h4>${role.title}</h4>
+                <p>${role.description || 'Explora áreas y descubre oportunidades de carrera.'}</p>
+              </article>
+            `).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderProfileScreen() {
+      if (!window.CareerProfile || !window.CareerProfileData) {
+        showToast('No se pudo cargar Career Profile. Revisa los scripts del proyecto.');
+        renderScreen('map');
+        return;
+      }
+      CareerProfile.render(app, {
+        areas: departments,
+        onSave: (savedProfile) => {
+          state.avatarPosition = { x: 150, y: 330 };
+          showToast(`Perfil guardado. Bienvenido, ${savedProfile.name}.`);
+          renderScreen('map');
+        }
+      });
     }
 
     function renderMap() {
@@ -386,12 +435,12 @@ const app = document.getElementById('app');
           </div>
           <div class="collection-grid">
             ${departments.map(dep => {
-              const discovered = state.discoveredDepartments.includes(dep.id) || state.discoveredPositions.includes(dep.name);
+              const discovered = state.discoveredDepartments.includes(dep.id);
               const stars = discovered ? '⭐⭐⭐' : '☆';
               return `<div class="collection-card ${discovered ? 'unlocked' : 'locked'}">
                 <span class="check">${discovered ? '✓' : '○'}</span>
                 <div class="rarity">${stars}</div>
-                <strong>${dep.name}</strong>
+                <strong>${dep.title}</strong>
                 <div style="color:var(--muted); margin-top:6px;">${dep.title}</div>
               </div>`;
             }).join('')}
@@ -484,6 +533,12 @@ const app = document.getElementById('app');
           <div class="hud-btns">
             <button
               class="hud-btn"
+              onclick="renderScreen('profile')"
+            >
+              👤 Perfil
+            </button>
+            <button
+              class="hud-btn"
               onclick="openPassport()"
             >
               📖 Passport
@@ -515,11 +570,6 @@ const app = document.getElementById('app');
       renderScreen('map');
     }
 
-    function toggleCategoryMenu() {
-      state.categoryMenuOpen = !state.categoryMenuOpen;
-      renderScreen('map');
-    }
-
     function filterByCategory(categoryId) {
       state.currentCategory = categoryId === state.currentCategory ? null : categoryId;
       state.categoryMenuOpen = false;
@@ -536,7 +586,12 @@ const app = document.getElementById('app');
       state.currentRole = roleId;
       state.startedAt = Date.now();
       state.avatarPosition = { x: 150, y: 330 };
-      renderScreen('map');
+      const profile = window.CareerProfileData ? CareerProfileData.getProfile() : null;
+      if (profile && profile.completed) {
+        renderScreen('map');
+      } else {
+        renderScreen('profile');
+      }
       unlockAchievement('Explorador Career Quest');
     }
 
@@ -545,7 +600,15 @@ const app = document.getElementById('app');
     }
     
     function openPassport() {
-
+      if (!window.CareerPassport) {
+        showToast('No se pudo abrir Passport. Revisa los scripts del proyecto.');
+        return;
+      }
+      const existingOverlay = document.getElementById('passportOverlay');
+      if (existingOverlay) {
+        existingOverlay.remove();
+      }
+      
       const passportContainer =
         document.createElement('div');
 
@@ -578,12 +641,26 @@ const app = document.getElementById('app');
         'Cerrar Passport'
       );
 
-      closeButton.onclick =
-        () => {
+      const handleEscape = (event) => {
+        if (event.key === 'Escape') {
+          closePassport();
+        }
+      };
 
-            passportContainer.remove();
+      const closePassport = () => {
+        passportContainer.remove();
+        document.removeEventListener('keydown', handleEscape);
+      };
 
-        };
+      closeButton.onclick = closePassport;
+
+      passportContainer.addEventListener('click', (event) => {
+        if (event.target === passportContainer) {
+          closePassport();
+        }
+      });
+
+      document.addEventListener('keydown', handleEscape);
 
       passportContainer.appendChild(
         closeButton
@@ -683,7 +760,9 @@ const app = document.getElementById('app');
 
     function addDiscovery(dep) {
       if (!state.discoveredDepartments.includes(dep.id)) state.discoveredDepartments.push(dep.id);
-      if (!state.discoveredPositions.includes(dep.name)) state.discoveredPositions.push(dep.name);
+      if (state.currentPosition && !state.discoveredPositions.includes(state.currentPosition)) {
+        state.discoveredPositions.push(state.currentPosition);
+      }
     }
 
     function gainXP(amount) {
