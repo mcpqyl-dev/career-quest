@@ -201,15 +201,43 @@
       .collection-grid { grid-template-columns:repeat(2,1fr); }
     }
     @media (max-width: 760px) {
-        #app { width:100vw; height:100dvh; border-radius:0; border:none; }
-      .screen { padding:14px; }
+            html, body { height:auto; min-height:100%; overflow:auto; }
+            body { display:block; min-height:100svh; min-height:100dvh; }
+            #app { width:100vw; height:100svh; height:100dvh; border-radius:0; border:none; }
+            .screen {
+                padding:
+                    calc(14px + env(safe-area-inset-top))
+                    calc(14px + env(safe-area-inset-right))
+                    calc(14px + env(safe-area-inset-bottom))
+                    calc(14px + env(safe-area-inset-left));
+                overflow-y:auto;
+                -webkit-overflow-scrolling:touch;
+                overscroll-behavior-y:contain;
+            }
+            .welcome,
+            .welcome.active,
+            .selection,
+            .department-screen,
+            .collection-screen,
+            .summary-screen {
+                display:block;
+            }
+            .hero-card { width:100%; padding:18px; border-radius:22px; gap:16px; }
+            .splash-card { width:min(94%, 560px); padding:28px 20px; }
       .role-grid, .collection-grid, .achievement-list, .department-stats, .stats-grid { grid-template-columns:1fr; }
             .hud { margin-bottom:10px; flex-wrap:wrap; min-height:auto; }
             .hud-card { height:70px; }
             .xp-pill { flex:1 1 100%; min-width:0; }
             .hud-btns { width:100%; margin-left:0; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
       .npc-bubble { top:16px; }
-        .map-screen { padding:10px 10px 12px; }
+        .map-screen {
+            padding:
+                calc(10px + env(safe-area-inset-top))
+                calc(10px + env(safe-area-inset-right))
+                calc(12px + env(safe-area-inset-bottom))
+                calc(10px + env(safe-area-inset-left));
+            overflow:hidden;
+        }
         .map-shell { padding:0; border-radius:16px; }
       .department-screen { padding:14px; }
       .map-world { width:100%; height:100%; }
@@ -1283,7 +1311,7 @@
 
         width: 100%;
 
-        padding: 0;
+        padding-top: calc(54px + env(safe-area-inset-top));
 
     }
 
@@ -1734,6 +1762,8 @@
         height: auto;
 
         display: block;
+
+        padding-top: calc(54px + env(safe-area-inset-top));
 
     }
 
