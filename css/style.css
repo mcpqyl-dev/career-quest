@@ -25,9 +25,12 @@
     .map-screen.active { display:flex; }
     .screen-enter { animation: screenEnter .42s cubic-bezier(.2,.75,.2,1); }
 
-    .splash { background: radial-gradient(circle at 20% 20%, rgba(76,201,240,0.18), transparent 30%), radial-gradient(circle at 80% 10%, rgba(124,77,255,0.18), transparent 25%), linear-gradient(135deg, #08121f, #0d2133 50%, #091423); display:flex; align-items:center; justify-content:center; }
-    .splash-card { width:min(92%, 600px); text-align:center; padding:44px; border:1px solid rgba(255,255,255,0.13); border-radius:34px; background: rgba(6,11,20,0.72); backdrop-filter: blur(24px); box-shadow: var(--shadow); }
-    .logo-badge { width:110px; height:110px; margin:0 auto 20px; border-radius:28px; background: linear-gradient(135deg, rgba(76,201,240,0.25), rgba(124,77,255,0.35)); border:1px solid rgba(255,255,255,0.16); display:grid; place-items:center; font-size:44px; animation: float 3s ease-in-out infinite; }
+    .splash { background: radial-gradient(circle at 20% 20%, rgba(76,201,240,0.18), transparent 30%), radial-gradient(circle at 80% 10%, rgba(124,77,255,0.18), transparent 25%), linear-gradient(135deg, #08121f, #0d2133 50%, #091423); display:flex; align-items:center; justify-content:center; padding:0; }
+    .splash.active { display:flex; align-items:center; justify-content:center; }
+    .splash-card { width:min(92%, 600px); margin:auto; text-align:center; padding:44px; border:1px solid rgba(255,255,255,0.13); border-radius:34px; background: rgba(6,11,20,0.72); backdrop-filter: blur(24px); box-shadow: var(--shadow); }
+    .logo-badge { width:110px; height:110px; margin:0 auto 20px; border-radius:28px; background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(76,201,240,0.24) 48%, rgba(124,77,255,0.3)); border:1px solid rgba(255,255,255,0.28); display:grid; place-items:center; font-size:44px; animation: float 3s ease-in-out infinite; position:relative; overflow:hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14), 0 16px 30px rgba(0,0,0,0.25); }
+    .logo-badge::after { content:""; position:absolute; width:78px; height:78px; border-radius:20px; background: rgba(255,255,255,0.94); box-shadow: 0 10px 26px rgba(0,0,0,0.18); }
+    .logo-badge img { width:72%; height:72%; object-fit:contain; position:relative; z-index:1; filter: drop-shadow(0 4px 9px rgba(0,0,0,0.22)); }
     .splash h1 { font-size:40px; margin:6px 0 12px; letter-spacing:0.08em; font-weight:800; }
     .splash p { color:var(--muted); font-size:16px; }
     .loader { height:10px; border-radius:999px; background:rgba(255,255,255,0.08); overflow:hidden; margin:24px 0 14px; }
@@ -35,6 +38,7 @@
     .pulse { animation:pulse 1.7s ease-in-out infinite; }
 
     .welcome { background: linear-gradient(120deg, rgba(13,24,45,0.96), rgba(8,15,29,0.96)); display:grid; place-items:center; }
+    .welcome.active { display:grid; place-items:center; }
     .hero-card { width:min(94%, 1040px); display:grid; grid-template-columns:1.05fr 0.95fr; gap:24px; align-items:center; padding:30px; border:1px solid rgba(255,255,255,0.1); border-radius:34px; background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); backdrop-filter: blur(18px); }
     .eyebrow { display:inline-block; padding:8px 12px; border-radius:999px; background:rgba(76,201,240,0.14); color:#bdeeff; font-size:12px; letter-spacing:0.24em; text-transform:uppercase; margin-bottom:14px; }
     .hero-card h2 { font-size:32px; line-height:1.14; margin:0 0 16px; }
@@ -61,21 +65,22 @@
     .role-card p { margin:0; color:var(--muted); font-size:14px; line-height:1.5; }
     .role-card::after { content:""; position:absolute; inset:auto -14% -18% auto; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle, rgba(76,201,240,0.18), transparent 70%); }
 
-    .hud { position:relative; top:auto; left:auto; right:auto; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; z-index:10; pointer-events:auto; margin-bottom:12px; }
-    .hud-card { background:rgba(7,16,30,0.84); backdrop-filter: blur(18px); border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:12px 14px; display:flex; align-items:center; gap:12px; min-width:150px; box-shadow:0 14px 32px rgba(0,0,0,0.18); }
-    .hud-card .label { color:var(--muted); font-size:12px; letter-spacing:0.18em; text-transform:uppercase; }
-    .hud-card .value { font-size:17px; font-weight:700; }
-    .xp-pill { flex:1; min-width:220px; }
+    .hud { position:relative; top:auto; left:auto; right:auto; display:flex; flex-wrap:nowrap; gap:10px; align-items:stretch; justify-content:flex-start; z-index:10; pointer-events:auto; margin-bottom:12px; min-height:74px; }
+    .hud-card { background:rgba(7,16,30,0.84); backdrop-filter: blur(18px); border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:10px 14px; display:flex; align-items:center; gap:12px; min-width:132px; height:74px; box-shadow:0 14px 32px rgba(0,0,0,0.18); flex:0 0 auto; }
+    .hud-card .label { color:var(--muted); font-size:11px; line-height:1.2; letter-spacing:0.14em; text-transform:uppercase; }
+    .hud-card .value { font-size:17px; line-height:1.2; font-weight:700; }
+    .xp-pill { flex:1 1 250px; min-width:250px; }
     .bar { height:8px; border-radius:999px; background:rgba(255,255,255,0.08); overflow:hidden; margin-top:5px; }
     .bar > span { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg, var(--accent), var(--accent-3)); transition:width .4s ease; }
-    .hud-btns { display:flex; gap:10px; flex-wrap:wrap; pointer-events:auto; }
-    .hud-btn { padding:10px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.08); color:white; cursor:pointer; white-space:nowrap; min-width:0; flex-shrink:0; }
+    .hud-btns { display:flex; gap:10px; flex-wrap:nowrap; pointer-events:auto; align-items:stretch; margin-left:auto; }
+    .hud-btn { padding:0 14px; height:44px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.08); color:white; cursor:pointer; white-space:nowrap; min-width:0; flex-shrink:0; font-size:13px; font-weight:600; display:inline-flex; align-items:center; justify-content:center; }
     .hero-button, .primary-btn, .secondary-btn { min-width:0; white-space:nowrap; }
     .primary-btn, .secondary-btn { padding:11px 14px; }
 
-    .map-screen { background: linear-gradient(180deg, rgba(10,19,33,0.98), rgba(5,12,24,0.98)); display:flex; flex-direction:column; padding:0; }
+    .map-screen { background: linear-gradient(180deg, rgba(10,19,33,0.98), rgba(5,12,24,0.98)); display:flex; flex-direction:column; padding:16px 20px 20px; min-height:0; }
+    .map-screen .hud { margin-bottom:14px; }
     .map-shell { position:relative; flex:1; min-height:0; padding:0; overflow:hidden; border-radius:24px; border:1px solid rgba(255,255,255,0.08); display:block; }
-    .map-world { position:absolute; top:50%; left:50%; width:min(100%, 1560px); height:auto; aspect-ratio:1560 / 640; max-width:100%; max-height:100%; transform:translate(-50%, -50%); transform-origin:center center; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
+    .map-world { position:absolute; top:50%; left:50%; width:min(100%, 1500px); height:auto; aspect-ratio:1560 / 640; max-width:100%; max-height:100%; transform:translate(-50%, -50%); transform-origin:center center; transition: transform .8s cubic-bezier(.2,.8,.2,1); }
     .map-svg { width:100%; height:100%; display:block; }
     .map-backdrop { position:absolute; inset:0; background: radial-gradient(circle at 20% 20%, rgba(76,201,240,0.08), transparent 34%), radial-gradient(circle at 85% 10%, rgba(122,77,255,0.1), transparent 30%), linear-gradient(180deg, #13263c, #0a1323 65%, #09111b); }
     .cloud { animation: drift 20s linear infinite; }
@@ -199,12 +204,17 @@
       #app { height:100vh; border-radius:0; }
       .screen { padding:14px; }
       .role-grid, .collection-grid, .achievement-list, .department-stats, .stats-grid { grid-template-columns:1fr; }
-      .hud { margin-bottom:10px; }
+            .hud { margin-bottom:10px; flex-wrap:wrap; min-height:auto; }
+            .hud-card { height:70px; }
+            .xp-pill { flex:1 1 100%; min-width:0; }
+            .hud-btns { width:100%; margin-left:0; flex-wrap:wrap; }
       .npc-bubble { top:16px; }
-      .map-shell { padding:0; }
+    .map-screen { padding:12px 12px 14px; }
+    .map-shell { padding:0; }
       .department-screen { padding:14px; }
       .map-world { width:100%; height:100%; }
-      .hud-btn, .primary-btn, .secondary-btn { padding:10px 12px; font-size:14px; }
+            .hud-btn, .primary-btn, .secondary-btn { padding:10px 12px; font-size:14px; }
+            .hud-btn { height:42px; }
     }
 /* =========================================================
    CAREER QUEST v1.1

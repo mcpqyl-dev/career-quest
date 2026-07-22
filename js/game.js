@@ -1,5 +1,23 @@
 const app = document.getElementById('app');
 
+    const EXCLUDED_ROLE_ID = 'superintendente';
+    const EXCLUDED_ROLE_TITLE = 'superintendente';
+
+    function isExcludedCategory(category) {
+      if (!category) return false;
+      const id = String(category.id || '').trim().toLowerCase();
+      const title = String(category.title || '').trim().toLowerCase();
+      return id === EXCLUDED_ROLE_ID || title === EXCLUDED_ROLE_TITLE;
+    }
+
+    function getAvailableCategories() {
+      return (window.positionCategories || []).filter(category => !isExcludedCategory(category));
+    }
+
+    function getVisibleRoleOptions() {
+      return roleOptions.filter(role => !isExcludedCategory(role));
+    }
+
     const roleOptions = ((window.positionCategories && window.positionCategories.length)
       ? window.positionCategories
       : (window.roleOptions || [])).map(role => ({
@@ -113,8 +131,9 @@ const app = document.getElementById('app');
     function createPositionQuiz(dep, position) {
       const functions = uniqueTexts(position.functions || []);
       const allDepFunctions = uniqueTexts(
-        (dep.positions || [])
-          .flatMap(pos => pos.functions || [])
+        (dep.positions || []).reduce((acc, pos) => {
+          return acc.concat(pos.functions || []);
+        }, [])
       );
       const otherFunctions = allDepFunctions.filter(func =>
         !functions.some(own => own.toLowerCase() === func.toLowerCase())
@@ -258,10 +277,40 @@ const app = document.getElementById('app');
 
     let audioCtx = null;
 
+    function waitForWelcomeInteraction() {
+      return new Promise((resolve) => {
+        let completed = false;
+
+        const done = () => {
+          if (completed) return;
+          completed = true;
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mousedown', onMouseDown);
+          document.removeEventListener('touchstart', onTouchStart);
+          resolve();
+        };
+
+        const onMouseMove = () => done();
+        const onMouseDown = (event) => {
+          if (event.button === 0) done();
+        };
+        const onTouchStart = () => done();
+
+        document.addEventListener('mousemove', onMouseMove, { passive: true });
+        document.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('touchstart', onTouchStart, { passive: true });
+      });
+    }
+
     function init() {
       state.onboardingSeen = hasSeenOnboarding();
-      renderScreen('splash');
-      setTimeout(() => renderScreen('welcome'), 1800);
+      state.screen = 'splash';
+      renderSplash();
+      waitForWelcomeInteraction().then(() => {
+        if (state.screen === 'splash') {
+          renderScreen('welcome');
+        }
+      });
     }
 
     function hasSeenOnboarding() {
@@ -309,7 +358,9 @@ const app = document.getElementById('app');
       app.innerHTML = `
         <section id="splash" class="screen splash active screen-enter">
           <div class="splash-card">
-            <div class="logo-badge pulse">🎯</div>
+            <div class="logo-badge pulse">
+              <img src="images/Chinalco.png" alt="Chinalco" />
+            </div>
             <p class="eyebrow">Roadshow de movilidad horizontal</p>
             <h1>Career Quest</h1>
             <p>Descubre tu próximo desafío dentro de Chinalco.</p>
@@ -318,7 +369,12 @@ const app = document.getElementById('app');
           </div>
         </section>
       `;
-      requestAnimationFrame(() => document.getElementById('loaderBar').style.width = '100%');
+      requestAnimationFrame(() => {
+        const loaderBar = document.getElementById('loaderBar');
+        if (loaderBar) {
+          loaderBar.style.width = '100%';
+        }
+      });
     }
 
     function renderWelcome() {
@@ -356,6 +412,7 @@ const app = document.getElementById('app');
     }
 
     function renderRoleSelection() {
+      const visibleRoleOptions = getVisibleRoleOptions();
       app.innerHTML = `
         <section id="selection" class="screen selection active screen-enter">
           <div class="section-header">
@@ -366,7 +423,7 @@ const app = document.getElementById('app');
             <button class="secondary-btn" onclick="renderScreen('welcome')">Volver</button>
           </div>
           <div class="role-grid">
-            ${roleOptions.map(role => `
+            ${visibleRoleOptions.map(role => `
               <article class="role-card" onclick="selectRole('${role.id}')" style="border-color:${role.color}44;">
                 <div class="icon">${role.icon || '🎯'}</div>
                 <h4>${role.title}</h4>
@@ -396,18 +453,20 @@ const app = document.getElementById('app');
     function renderMap() {
       const role = state.currentRole ? roleOptions.find(r => r.id === state.currentRole) : null;
       const currentDep = state.currentDepartment ? departments.find(d => d.id === state.currentDepartment) : null;
-      const categories = window.positionCategories || [];
+      const categories = getAvailableCategories();
       const selectedCategory = categories.find(c => c.id === state.currentCategory);
       
       // Filtrar departamentos si hay categoría seleccionada
       const visibleDepartments = state.currentCategory 
-        ? departments.filter(dep => selectedCategory.areas.includes(dep.title))
+        ? (selectedCategory && Array.isArray(selectedCategory.areas)
+          ? departments.filter(dep => selectedCategory.areas.includes(dep.title))
+          : departments)
         : departments;
       
       app.innerHTML = `
         <section id="map" class="screen map-screen active screen-enter">
           ${renderHud()}
-          <div style="position: absolute; top: 80px; left: 20px; z-index: 100; min-width: 210px;">
+          <div style="position: absolute; top: 96px; left: 24px; z-index: 100; min-width: 210px;">
             <button data-guide="category-filter" onclick="toggleCategoryMenu()" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; background: rgba(10, 18, 38, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-radius: ${state.categoryMenuOpen ? '12px 12px 0 0' : '12px'}; color: #f7fbff; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
               <span style="font-size:16px;">${selectedCategory ? selectedCategory.icon : '🗂️'}</span>
               <span style="flex:1; text-align:left;">${selectedCategory ? selectedCategory.title : 'Elige tu categoría'}</span>
@@ -566,7 +625,7 @@ const app = document.getElementById('app');
       if (!dep) return;
 
       // Obtener la categoría seleccionada
-      const categories = window.positionCategories || [];
+      const categories = getAvailableCategories();
       const selectedCategory = categories.find(c => c.id === state.currentCategory);
       
       // Filtrar posiciones por categoría si hay
@@ -621,7 +680,7 @@ const app = document.getElementById('app');
       if (!dep) return;
 
       // Filtrar posiciones por categoría si está seleccionada
-      const categories = window.positionCategories || [];
+      const categories = getAvailableCategories();
       const selectedCategory = categories.find(c => c.id === state.currentCategory);
       const availablePositions = selectedCategory 
         ? dep.positions.filter(pos => pos.category === selectedCategory.title)
@@ -923,7 +982,13 @@ const app = document.getElementById('app');
     }
 
     function filterByCategory(categoryId) {
-      state.currentCategory = categoryId === state.currentCategory ? null : categoryId;
+      const categories = getAvailableCategories();
+      const exists = categories.some(category => category.id === categoryId);
+      if (!exists) {
+        state.currentCategory = null;
+      } else {
+        state.currentCategory = categoryId === state.currentCategory ? null : categoryId;
+      }
       state.categoryMenuOpen = false;
       renderScreen('map');
     }
@@ -936,7 +1001,7 @@ const app = document.getElementById('app');
 
     function selectRole(roleId) {
       state.currentRole = roleId;
-      const categories = window.positionCategories || [];
+      const categories = getAvailableCategories();
       state.currentCategory = categories.some(category => category.id === roleId)
         ? roleId
         : null;
@@ -1439,18 +1504,10 @@ const app = document.getElementById('app');
 
     function updateCamera() {
       const mapWorld = document.getElementById('mapWorld');
-      const shell = document.querySelector('.map-shell');
-      if (!mapWorld || !shell) return;
-      const viewportW = shell.clientWidth || 930;
-      const viewportH = shell.clientHeight || 600;
-      const targetX = state.avatarPosition.x - viewportW / 2 + 60;
-      const targetY = state.avatarPosition.y - viewportH / 2 + 70;
-      const maxX = Math.max(0, 1560 - viewportW);
-      const maxY = Math.max(0, 640 - viewportH);
-      const cameraX = Math.max(0, Math.min(maxX, targetX));
-      const cameraY = Math.max(0, Math.min(maxY, targetY));
-      state.camera = { x: cameraX, y: cameraY };
-      mapWorld.style.transform = `translate(-50%, -50%) translate(${-cameraX}px, ${-cameraY}px)`;
+      if (!mapWorld) return;
+      // Mantener el mapa fijo: solo se desplaza el avatar.
+      state.camera = { x: 0, y: 0 };
+      mapWorld.style.transform = 'translate(-50%, -50%)';
     }
 
     function showInterest() {
@@ -1611,24 +1668,36 @@ const app = document.getElementById('app');
     }
 
     function playTone(type) {
-      if (typeof window === 'undefined') return;
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      try {
+        if (typeof window === 'undefined') return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+
+        if (!audioCtx) {
+          audioCtx = new AudioContextClass();
+        }
+
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+
+        const now = audioCtx.currentTime;
+        const gain = audioCtx.createGain();
+        gain.connect(audioCtx.destination);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(type === 'unlock' ? 0.05 : 0.025, now + 0.02);
+
+        const osc = audioCtx.createOscillator();
+        osc.connect(gain);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(type === 'unlock' ? 720 : 500, now);
+        osc.frequency.exponentialRampToValueAtTime(type === 'unlock' ? 1100 : 620, now + 0.12);
+        osc.start(now);
+        osc.stop(now + 0.16);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+      } catch (error) {
+        // No bloquear renderizado por fallos de audio.
       }
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const now = audioCtx.currentTime;
-      const gain = audioCtx.createGain();
-      gain.connect(audioCtx.destination);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(type === 'unlock' ? 0.05 : 0.025, now + 0.02);
-      const osc = audioCtx.createOscillator();
-      osc.connect(gain);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(type === 'unlock' ? 720 : 500, now);
-      osc.frequency.exponentialRampToValueAtTime(type === 'unlock' ? 1100 : 620, now + 0.12);
-      osc.start(now);
-      osc.stop(now + 0.16);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
     }
 
     // Exponer explícitamente callbacks usados en atributos onclick para
