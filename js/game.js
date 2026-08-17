@@ -18,6 +18,12 @@ const app = document.getElementById('app');
       return roleOptions.filter(role => !isExcludedCategory(role));
     }
 
+    function getDisplayCategoryTitle(title) {
+      return String(title || '').trim().toLowerCase() === 'analista'
+        ? 'Analista/Coordinador'
+        : title;
+    }
+
     const roleOptions = ((window.positionCategories && window.positionCategories.length)
       ? window.positionCategories
       : (window.roleOptions || [])).map(role => ({
@@ -100,18 +106,20 @@ const app = document.getElementById('app');
       const normalizedCorrect = normalizeText(correctOption) || 'No definida';
       const wantedDistractors = Math.max(1, desiredCount - 1);
       const uniqueCandidateDistractors = uniqueTexts(candidates)
-        .filter(item => item.toLowerCase() !== normalizedCorrect.toLowerCase());
+        .filter(item => normalizeText(item).toLowerCase() !== normalizedCorrect.toLowerCase());
       const uniqueFallbackDistractors = uniqueTexts(fallbackPool)
-        .filter(item => item.toLowerCase() !== normalizedCorrect.toLowerCase());
+        .filter(item => normalizeText(item).toLowerCase() !== normalizedCorrect.toLowerCase());
 
       const distractors = [];
+      const seenKeys = new Set([normalizedCorrect.toLowerCase()]);
       const addUniqueDistractor = (item) => {
         if (!item) return;
         const normalized = normalizeText(item);
         if (!normalized) return;
-        if (normalized.toLowerCase() === normalizedCorrect.toLowerCase()) return;
-        if (distractors.some(existing => existing.toLowerCase() === normalized.toLowerCase())) return;
+        const normalizedKey = normalized.toLowerCase();
+        if (normalizedKey === normalizedCorrect.toLowerCase() || seenKeys.has(normalizedKey)) return;
         distractors.push(normalized);
+        seenKeys.add(normalizedKey);
       };
 
       uniqueCandidateDistractors.forEach(addUniqueDistractor);
@@ -124,14 +132,36 @@ const app = document.getElementById('app');
       }
 
       const options = [normalizedCorrect, ...distractors.slice(0, wantedDistractors)];
-      const rotation = hashString(seed) % options.length;
-      const rotatedOptions = options
+      const cleanedOptions = [];
+      const cleanedSeenKeys = new Set();
+      options.forEach(option => {
+        const normalizedOption = normalizeText(option);
+        if (!normalizedOption) return;
+        const optionKey = normalizedOption.toLowerCase();
+        if (cleanedSeenKeys.has(optionKey)) return;
+        cleanedSeenKeys.add(optionKey);
+        cleanedOptions.push(normalizedOption);
+      });
+
+      while (cleanedOptions.length < desiredCount) {
+        const filler = `Alternativa adicional ${fillerIndex}`;
+        const fillerKey = filler.toLowerCase();
+        if (!cleanedSeenKeys.has(fillerKey)) {
+          cleanedSeenKeys.add(fillerKey);
+          cleanedOptions.push(filler);
+        }
+        fillerIndex += 1;
+      }
+
+      const rotation = hashString(seed) % cleanedOptions.length;
+      const rotatedOptions = cleanedOptions
         .slice(rotation)
-        .concat(options.slice(0, rotation));
+        .concat(cleanedOptions.slice(0, rotation));
+      const answerIndex = rotatedOptions.findIndex(option => normalizeText(option).toLowerCase() === normalizedCorrect.toLowerCase());
 
       return {
         options: rotatedOptions,
-        answer: rotatedOptions.findIndex(option => option === normalizedCorrect)
+        answer: answerIndex >= 0 ? answerIndex : 0
       };
     }
 
@@ -161,6 +191,7 @@ const app = document.getElementById('app');
         `${dep.id}:${position.title}:function`
       );
 
+      const fallbackFalseFunction = `El puesto ${position.title} no coordina procesos de soporte operativo.`;
       let booleanQuestion = {
         type: 'boolean',
         question: `¿Es parte del puesto ${position.title}: ${correctFunction}?`,
@@ -172,6 +203,12 @@ const app = document.getElementById('app');
         booleanQuestion = {
           type: 'boolean',
           question: `¿Es parte del puesto ${position.title}: ${falseFunction}?`,
+          answer: false
+        };
+      } else {
+        booleanQuestion = {
+          type: 'boolean',
+          question: `¿Es parte del puesto ${position.title}: ${fallbackFalseFunction}?`,
           answer: false
         };
       }
@@ -235,13 +272,13 @@ const app = document.getElementById('app');
 
     // Coordenadas de edificios sobre el mapa imagen (1560x640)
     const DEPT_COORDS = {
-      'almacen-de-concentrado-y-operaciones-portuarias': { x: 185, y: 320 },
-      'almacenes-y-control-de-inventario':               { x: 480, y: 205 },
-      'direccion-de-logistica-y-comercial':              { x: 895, y: 265 },
-      'comercial':                                       { x: 1385, y: 205 },
-      'compras-y-contratos':                             { x: 480, y: 415 },
-      'planeamiento-de-inventario':                      { x: 820, y: 440 },
-      'transporte-y-trafico-internacional':              { x: 1285, y: 455 }
+      'almacen-de-concentrado-y-operaciones-portuarias': { x: 260, y: 200 },
+      'almacenes-y-control-de-inventario':               { x: 650, y: 200 },
+      'direccion-de-logistica-y-comercial':              { x: 1050, y: 220 },
+      'comercial':                                       { x: 1400, y: 190 },
+      'compras-y-contratos':                             { x: 550, y: 580 },
+      'planeamiento-de-inventario':                      { x: 970, y: 580 },
+      'transporte-y-trafico-internacional':              { x: 1360, y: 500 }
     };
     departments.forEach(dep => {
       if (DEPT_COORDS[dep.id]) {
@@ -366,9 +403,9 @@ const app = document.getElementById('app');
         <section id="splash" class="screen splash active screen-enter">
           <div class="splash-card">
             <div class="logo-badge pulse">
-              <img src="images/Chinalco.png" alt="Chinalco" />
+              <img src="images/Chinalco.webp" alt="Chinalco" />
             </div>
-            <p class="eyebrow">Roadshow de movilidad horizontal</p>
+            <p class="eyebrow">Roadshow de movimiento horizontal</p>
             <h1>Career Quest</h1>
             <p>Descubre tu próximo desafío dentro de Chinalco.</p>
             <div class="loader"><div class="loader-bar" id="loaderBar"></div></div>
@@ -390,7 +427,7 @@ const app = document.getElementById('app');
           <div class="hero-card">
             <div>
               <span class="eyebrow">Inicio de misión</span>
-              <h2>En Chinalco creemos que el crecimiento comienza cuando conocemos nuevos desafíos.</h2>
+              <h2>En Chinalco creemos que el crecimiento se potencia cuando conocemos nuevos desafíos.</h2>
               <div class="typing" id="typingText"></div>
               <button class="hero-button" onclick="startAdventure()">Comenzar aventura</button>
             </div>
@@ -410,7 +447,7 @@ const app = document.getElementById('app');
           </div>
         </section>
       `;
-      const text = 'Hoy iniciarás una aventura para descubrir oportunidades dentro de la organización y conocer cómo la movilidad horizontal puede abrirte nuevas puertas.';
+      const text = 'Hoy iniciarás una aventura para descubrir oportunidades dentro de la organización y conocer cómo el movimiento horizontal puede abrirte nuevas puertas.';
       typeWriter(text, 'typingText');
     }
 
@@ -433,7 +470,7 @@ const app = document.getElementById('app');
             ${visibleRoleOptions.map(role => `
               <article class="role-card" onclick="selectRole('${role.id}')" style="border-color:${role.color}44;">
                 <div class="icon">${role.icon || '🎯'}</div>
-                <h4>${role.title}</h4>
+                <h4>${getDisplayCategoryTitle(role.title)}</h4>
                 <p>${role.description || 'Explora áreas y descubre oportunidades de carrera.'}</p>
               </article>
             `).join('')}
@@ -484,19 +521,19 @@ const app = document.getElementById('app');
           <div style="${categoryPanelStyle}">
             <button data-guide="category-filter" onclick="toggleCategoryMenu()" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; background: rgba(10, 18, 38, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(100, 200, 255, 0.22); border-radius: ${state.categoryMenuOpen ? '12px 12px 0 0' : '12px'}; color: #f7fbff; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
               <span style="font-size:16px;">${selectedCategory ? selectedCategory.icon : '🗂️'}</span>
-              <span style="flex:1; text-align:left;">${selectedCategory ? selectedCategory.title : 'Elige tu categoría'}</span>
+              <span style="flex:1; text-align:left;">${selectedCategory ? getDisplayCategoryTitle(selectedCategory.title) : 'Elige tu categoría'}</span>
               <span style="font-size:11px; color:rgba(255,255,255,0.45); display:inline-block; transform: rotate(${state.categoryMenuOpen ? '180deg' : '0deg'});">▼</span>
             </button>
             ${state.categoryMenuOpen ? `
             <div style="${categoryMenuStyle}">
               <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03);">
-                <span style="font-size:12px; color:#c8dff5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${selectedCategory ? `Filtro activo: ${selectedCategory.title}` : 'Sin filtro activo'}</span>
+                <span style="font-size:12px; color:#c8dff5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${selectedCategory ? `Filtro activo: ${getDisplayCategoryTitle(selectedCategory.title)}` : 'Sin filtro activo'}</span>
                 <button onclick="closeCategoryMenu()" style="border:none; border-radius:8px; background:rgba(255,255,255,0.08); color:#e6f2ff; padding:6px 10px; font-size:12px; cursor:pointer;">Cerrar</button>
               </div>
               ${categories.map(cat => `
                 <button onclick="filterByCategory('${cat.id}')" style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: ${state.currentCategory === cat.id ? cat.color + '20' : 'transparent'}; border: none; border-bottom: 1px solid rgba(255,255,255,0.05); color: ${state.currentCategory === cat.id ? cat.color : '#c8dff5'}; font-size: 13px; cursor: pointer; width: 100%; text-align: left; font-weight: ${state.currentCategory === cat.id ? '700' : '400'};">
                   <span style="font-size:15px;">${cat.icon}</span>
-                  <span>${cat.title}</span>
+                  <span>${getDisplayCategoryTitle(cat.title)}</span>
                   ${state.currentCategory === cat.id ? `<span style="margin-left:auto; width:6px; height:6px; border-radius:50%; background:${cat.color};"></span>` : ''}
                 </button>
               `).join('')}
@@ -516,7 +553,7 @@ const app = document.getElementById('app');
                     <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
                   </filter>
                 </defs>
-                <image href="images/map.png" x="0" y="0" width="1560" height="640" preserveAspectRatio="xMidYMid meet"/>
+                <image href="images/map.webp" x="0" y="0" width="1560" height="640" preserveAspectRatio="xMidYMid meet"/>
                 ${visibleDepartments.map(dep => `${renderDepartmentBuilding(dep)}`).join('')}
               </svg>
               <div class="avatar ${state.moving ? 'walking' : 'idle'}" id="avatar" style="left:${state.avatarPosition.x}px; top:${state.avatarPosition.y}px;">
@@ -658,9 +695,7 @@ const app = document.getElementById('app');
           ${renderHud()}
           <div class="positions-container">
             <div class="positions-header" style="background: linear-gradient(135deg, ${dep.color}20 0%, ${dep.color}40 100%); border-left: 5px solid ${dep.color}; padding: 28px; border-radius: 16px; margin-bottom: 24px;">
-              <div class="meta" style="color: ${dep.color}; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; margin-bottom: 8px;">${selectedCategory ? selectedCategory.icon + ' ' + selectedCategory.title + ' • ' : ''}${dep.mapLabel || dep.title}</div>
-              <h2 style="font-size: 40px; margin: 0 0 12px 0; line-height: 1.1;">${dep.title}</h2>
-              <p style="margin: 0 0 16px 0; color: #dceaf8; line-height: 1.6; font-size: 14px;">${dep.description}</p>
+              <h2 style="font-size: 40px; margin: 0; line-height: 1.1;">${dep.title}</h2>
             </div>
             
             <div style="margin-bottom: 20px;">
@@ -674,10 +709,7 @@ const app = document.getElementById('app');
                   ${filteredPositions.map(pos => `
                     <div class="position-card" onclick="selectPosition('${pos.title}')" style="cursor:pointer; transition: all 0.3s ease; border: 2px solid rgba(${dep.color.substring(1).match(/.{1,2}/g).map(x => parseInt(x, 16)).join(', ')}, 0.3); border-left: 4px solid ${dep.color}; padding: 16px; border-radius: 12px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); display: flex; flex-direction: column;">
                       <strong style="font-size: 15px; color: #f7fbff; margin-bottom: 8px; line-height: 1.3; word-break: break-word;">${pos.title}</strong>
-                      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <span style="font-size: 12px; color: var(--muted);">${pos.level}</span>
-                        ${pos.functions && pos.functions.length > 0 ? `<span style="color: var(--accent); font-size: 11px; background: rgba(${dep.color.substring(1).match(/.{1,2}/g).map(x => parseInt(x, 16)).join(', ')}, 0.2); padding: 4px 8px; border-radius: 4px; white-space: nowrap;">📋 ${pos.functions.length}</span>` : ''}
-                      </div>
+                      <div style="margin-bottom: 8px;"></div>
                       <span style="font-size: 13px; color: #dceaf8; margin-bottom: 10px; display: block; line-height: 1.4; flex-grow: 1;">${pos.blurb}</span>
                       <span style="font-size: 11px; color: var(--accent); display: inline-block;">Ver detalles →</span>
                     </div>
@@ -829,7 +861,7 @@ const app = document.getElementById('app');
         return `
           <div class="quiz-options">
             ${question.options.map((option, idx) => `
-              <button class="quiz-option" onclick="answerQuiz(${idx})">${option}</button>
+              <button class="quiz-option" data-answer-index="${idx}" onclick="answerQuiz(${idx})">${option}</button>
             `).join('')}
           </div>
         `;
@@ -837,8 +869,8 @@ const app = document.getElementById('app');
       if (question.type === 'boolean') {
         return `
           <div class="quiz-options">
-            <button class="quiz-option" onclick="answerQuiz(true)">Verdadero</button>
-            <button class="quiz-option" onclick="answerQuiz(false)">Falso</button>
+            <button class="quiz-option" data-answer-value="true" onclick="answerQuiz(true)">Verdadero</button>
+            <button class="quiz-option" data-answer-value="false" onclick="answerQuiz(false)">Falso</button>
           </div>
         `;
       }
@@ -1535,15 +1567,42 @@ const app = document.getElementById('app');
         : question.type === 'choice'
           ? value === question.answer
           : false;
+      const correctValue = question.type === 'boolean' ? String(question.answer) : null;
+      const correctIndex = typeof question.answer === 'number' ? question.answer : null;
+      buttons.forEach((btn) => {
+        const btnIndex = Number(btn.getAttribute('data-answer-index'));
+        const btnValue = btn.getAttribute('data-answer-value');
+        const isCorrectButton = (correctIndex !== null && !Number.isNaN(btnIndex) && btnIndex === correctIndex)
+          || (correctValue !== null && btnValue === correctValue);
+        if (isCorrectButton) {
+          btn.classList.add('correct');
+        } else if (question.type === 'choice' || question.type === 'boolean') {
+          btn.classList.add('incorrect');
+        }
+      });
+      const feedbackElement = document.createElement('div');
+      feedbackElement.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+      feedbackElement.textContent = isCorrect ? '✅ Respuesta correcta' : '❌ Respuesta incorrecta';
+      const quizCard = document.querySelector('.quiz-card');
+      if (quizCard) {
+        const existingFeedback = quizCard.querySelector('.quiz-feedback');
+        if (existingFeedback) existingFeedback.remove();
+        quizCard.appendChild(feedbackElement);
+      }
       state.quizAttempts += 1;
       applyMissionRewards();
       if (isCorrect) {
         gainXP(40);
         addDiscovery(dep);
-        unlockAchievement(`${dep.title} en acción`);
         state.completedQuizzes += 1;
         applyMissionRewards();
         showToast('✅ ¡Respuesta correcta! +40 XP');
+        setTimeout(() => {
+          const achievementName = `${dep.title} en acción`;
+          if (!state.achievements.includes(achievementName)) {
+            unlockAchievement(achievementName);
+          }
+        }, 650);
       } else {
         showToast('❌ Respuesta incorrecta');
       }
@@ -1555,7 +1614,7 @@ const app = document.getElementById('app');
         } else {
           renderScreen('department');
         }
-      }, 900);
+      }, 1200);
     }
 
     function submitSequenceStep(index) {
@@ -1754,14 +1813,11 @@ const app = document.getElementById('app');
       const accent = dep.color;
       const isDiscovered = state.discoveredDepartments.includes(dep.id);
       const strokeColor = isDiscovered ? '#7df2c9' : accent;
-      const innerFill = isDiscovered ? 'rgba(125,242,201,0.24)' : `${accent}2E`;
       return `
         <g class="building" onclick="enterDepartment('${dep.id}')" transform="translate(${dep.x}, ${dep.y})">
-          <circle r="64" fill="${strokeColor}" opacity="0.14"/>
-          <circle r="52" fill="none" stroke="${strokeColor}" stroke-width="3.5" stroke-dasharray="10 6" opacity="0.92"/>
-          <circle r="36" fill="rgba(7,14,25,0.96)" stroke="${strokeColor}" stroke-width="3"/>
-          <circle r="23" fill="${innerFill}" stroke="${strokeColor}" stroke-width="2"/>
-          <circle r="8" fill="#f7fbff" opacity="0.98"/>
+          <g class="map-marker" data-accent="${strokeColor}">
+            <image href="images/Marcador.png" x="-56" y="-112" width="112" height="112" preserveAspectRatio="xMidYMid meet" />
+          </g>
         </g>
       `;
     }
